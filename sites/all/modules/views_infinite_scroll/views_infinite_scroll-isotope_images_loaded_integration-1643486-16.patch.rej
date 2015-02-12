@@ -1,0 +1,43 @@
+***************
+*** 39,46 ****
+                  $(img_location).after(img);
+                },
+                load: function() {
+                  $('div#views_infinite_scroll-ajax-loader').remove();
+                  Drupal.attachBehaviors(this);
+                }
+              });
+  
+--- 39,70 ----
+                  $(img_location).after(img);
+                },
+                load: function() {
++ 
+                  $('div#views_infinite_scroll-ajax-loader').remove();
+                  Drupal.attachBehaviors(this);
++ 
++                 /* Isotope and infinite scroll integration - http://drupal.org/node/1643486 */
++ 
++                 var container = '.view-content.isotope';
++ 
++                 if(typeof $('.view-content.isotope').isotope == 'function') {
++ 
++                   $new_elements = $(container).children(':not(.isotope-item)');
++ 
++                   // Check for existence of the jquery imagesLoaded library - https://github.com/desandro/imagesloaded
++                   // Required if the view items contain images- otherwise truncation errors occur.
++                   if(typeof $(container).imagesLoaded == 'function') {
++                     $(container).imagesLoaded(function(){
++                       $(container).isotope('appended', $new_elements);
++                     });
++                   }
++                   // If the view doesn't have images, then there is no requirement for the imagesLoaded library- simply tell isotope about $new_elements.
++                   else {
++                     $(container).isotope('appended', $new_elements);
++                   }
++ 
++                 }
++ 
+                }
+              });
+  

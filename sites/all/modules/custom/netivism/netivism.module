@@ -1,0 +1,41 @@
+<?php
+
+function netivism_form_alter(&$form, &$form_state, $form_id){
+  if(arg(0) === 'node' && isset($form['type']) && $form['type']['#value'] == 'portfolio'){
+    $form['#after_build'][] = 'netivism_add_js';
+  }
+}
+function netivism_add_js(&$ele){
+  global $user;
+  $roles = $user->roles;
+  unset($roles[2]);
+  if(count($roles) < 1){
+    $js = '
+    jQuery(document).ready(function($){
+      $("input#edit-field-portfolio-category-und-50").prop("checked",true);
+      $("#edit-field-portfolio-category").hide();
+    });  
+    ';
+    drupal_add_js($js, array('type' => 'inline'));
+  }
+  return $ele;
+}
+
+/**
+ * Alter the login form block
+ */
+function netivism_form_user_login_block_alter(&$form, &$form_state, $form_id) {
+  netivism_alter_login_form($form);
+}
+
+
+function fancy_login_user_login_block(&$form, &$form_state, $form_id) {
+  netivism_alter_login_form($form);
+}
+
+
+
+function netivism_alter_login_form(&$form) {
+  unset($form['name']);
+  unset($form['pass']);
+}

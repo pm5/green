@@ -1,0 +1,4 @@
+name = NETivism custom
+description = "custom module for specific usage"
+core = 7.x
+
