@@ -1298,6 +1298,10 @@ body section.block ul {
 	padding: 0 !important;
 	line-height: 1 !important;
 }
+.service-links-facebook-share{
+	position: relative;
+	top: -6px;
+}
 .service-links-google-plus-one{
 	width: 68px;
 }
