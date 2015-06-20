@@ -2,6 +2,7 @@
 
 /**
  * @file
+ * getlocations_fields_handler_field_longitude.inc
  * @author Bob Hutchinson http://drupal.org/user/52366
  * @copyright GNU GPL
  *

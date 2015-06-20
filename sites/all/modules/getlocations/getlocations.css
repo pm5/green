@@ -1,5 +1,7 @@
+
 /**
  * @file
+ * getlocations.css
  * @author Bob Hutchinson http://drupal.org/user/52366
  * @copyright GNU GPL
  *
@@ -29,6 +31,9 @@
 
 /* used in getlocations-view-map.tpl */
 .getlocations_map_wrapper {
+}
+
+.getlocations_map_wrapper_inner {
 }
 
 /* map links feature */

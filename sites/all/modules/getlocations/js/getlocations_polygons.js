@@ -1,6 +1,7 @@
 
 /**
  * @file
+ * getlocations_polygons.js
  * @author Bob Hutchinson http://drupal.org/user/52366
  * @copyright GNU GPL
  *
@@ -27,13 +28,13 @@
       $.each(Drupal.settings.getlocations_polygons, function (key, settings) {
 
         var strokeColor = (settings.strokeColor ? settings.strokeColor : default_polygon_settings.strokeColor);
-        if (typeof strokeColor.match("/^#/") === null) {
+        if (! strokeColor.match(/^#/)) {
           strokeColor = '#' + strokeColor;
         }
         var strokeOpacity = (settings.strokeOpacity ? settings.strokeOpacity : default_polygon_settings.strokeOpacity);
         var strokeWeight = (settings.strokeWeight ? settings.strokeWeight : default_polygon_settings.strokeWeight);
         var fillColor = (settings.fillColor ? settings.fillColor : default_polygon_settings.fillColor);
-        if (typeof fillColor.match("/^#/") === null) {
+        if (! fillColor.match(/^#/)) {
           fillColor = '#' + fillColor;
         }
         var fillOpacity = (settings.fillOpacity ? settings.fillOpacity : default_polygon_settings.fillOpacity);
@@ -53,7 +54,7 @@
           pg = polygons[i];
           if (pg.coords) {
             if (pg.strokeColor) {
-              if (typeof pg.strokeColor.match("/^#/") === null) {
+              if (! pg.strokeColor.match(/^#/)) {
                 pg.strokeColor = '#' + pg.strokeColor;
               }
               p_strokeColor = pg.strokeColor;
@@ -65,7 +66,7 @@
               p_strokeWeight = pg.strokeWeight;
             }
             if (pg.fillColor) {
-              if (typeof pg.fillColor.match("/^#/") === null) {
+              if (! pg.fillColor.match(/^#/)) {
                 pg.fillColor = '#' + pg.fillColor;
               }
               p_fillColor = pg.fillColor;
@@ -98,17 +99,17 @@
               polyOpts.fillOpacity = p_fillOpacity;
               polyOpts.clickable = p_clickable;
               poly[i] = new google.maps.Polygon(polyOpts);
-              poly[i].setMap(getlocations_map[key]);
+              poly[i].setMap(Drupal.getlocations_map[key]);
 
               if (p_clickable && p_message) {
                 google.maps.event.addListener(poly[i], 'click', function(event) {
                   // close any previous instances
                   if (pushit) {
-                    for (var i in getlocations_settings[key].infoBubbles) {
-                      getlocations_settings[key].infoBubbles[i].close();
+                    for (var i in Drupal.getlocations_settings[key].infoBubbles) {
+                      Drupal.getlocations_settings[key].infoBubbles[i].close();
                     }
                   }
-                  if (getlocations_settings[key].markeraction == 2) {
+                  if (Drupal.getlocations_settings[key].markeraction == 2) {
                     // infobubble
                     if (typeof(infoBubbleOptions) == 'object') {
                       var infoBubbleOpts = infoBubbleOptions;
@@ -132,9 +133,9 @@
                     infoWindowOpts.position = event.latLng;
                     var iw = new google.maps.InfoWindow(infoWindowOpts);
                   }
-                  iw.open(getlocations_map[key]);
+                  iw.open(Drupal.getlocations_map[key]);
                   if (pushit) {
-                    getlocations_settings[key].infoBubbles.push(iw);
+                    Drupal.getlocations_settings[key].infoBubbles.push(iw);
                   }
                 });
               }

@@ -2,6 +2,7 @@
 
 /**
  * @file
+ * getlocations.module
  * @author Bob Hutchinson http://drupal.org/user/52366
  * @copyright GNU GPL
  *
@@ -11,6 +12,7 @@
  */
 
 define('GETLOCATIONS_PATH', drupal_get_path('module', 'getlocations'));
+define('GETLOCATIONS_ADMIN_PATH', 'admin/config/services/getlocations');
 define('GETLOCATIONS_VERSION', '7.x-1.x');
 
 /**
@@ -28,14 +30,15 @@ function getlocations_help($path, $arg) {
  * Implements hook_init().
  */
 function getlocations_init() {
-
   if (module_exists('colorbox')) {
     $getlocations_colorbox = getlocations_colorbox_settings();
-    $settings = array('getlocations_colorbox' => $getlocations_colorbox);
-    drupal_add_js($settings, 'setting');
-    drupal_add_js(GETLOCATIONS_PATH . '/js/getlocations_colorbox.js');
+    if ($getlocations_colorbox['enable']) {
+      $settings = array('getlocations_colorbox' => $getlocations_colorbox);
+      drupal_add_js($settings, 'setting');
+      $getlocations_paths = getlocations_paths_get();
+      drupal_add_js($getlocations_paths['getlocations_colorbox_path']);
+    }
   }
-
 }
 
 /**
@@ -79,14 +82,25 @@ function getlocations_views_api() {
 function getlocations_menu() {
   $items = array();
 
-  $items['admin/config/services/getlocations'] = array(
-    'title' => 'Get locations',
-    'description' => 'Configure Get locations',
+  $items[GETLOCATIONS_ADMIN_PATH] = array(
+    'title' => 'Getlocations',
+    'description' => 'Configure Getlocations',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('getlocations_settings_form'),
     'access arguments' => array('administer site configuration'),
     'type' => MENU_NORMAL_ITEM,
     'file' => 'getlocations.admin.inc',
+  );
+
+  $items[GETLOCATIONS_ADMIN_PATH . '/base'] = array(
+    'title' => 'Base',
+    'description' => 'Getlocations base configuration',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('getlocations_settings_form'),
+    'access arguments' => array('administer site configuration'),
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'file' => 'getlocations.admin.inc',
+    'weight' => 1,
   );
 
   // getlocations/node/$nid    # show all location on one node
@@ -237,6 +251,21 @@ function getlocations_cdints_load($arg) {
 }
 
 /**
+ * sanity check on entity type
+ *
+ * @param string $arg Entity type.
+ *
+ * @return argument or FALSE
+ *
+ */
+function getlocations_entity_type_load($arg) {
+  if (getlocations_check_entity_type($arg)) {
+    return $arg;
+  }
+  return FALSE;
+}
+
+/**
  * Access callback: Checks for access permission and if there is a supported locative module installed
  *
  * @return bool
@@ -328,8 +357,8 @@ function getlocations_nodemap($nid) {
         if (isset($location['marker']) && ! empty($location['marker'])) {
           $marker = $location['marker'];
         }
-        $name = htmlspecialchars_decode($location['name'] ? strip_tags($location['name']) : strip_tags($node->title), ENT_QUOTES);
-        $latlons[] = array($location['latitude'], $location['longitude'], $location['lid'], $name, $marker, $location['key'], '', '');
+        $name = htmlspecialchars_decode(isset($location['name']) ? strip_tags($location['name']) : strip_tags($node->title), ENT_QUOTES);
+        $latlons[$ct] = array($location['latitude'], $location['longitude'], $location['lid'], $name, $marker, $location['key'], '', '');
 
         $sv_info = FALSE;
         if ($module == 'getlocations_fields' && count($locations) == 1) {
@@ -405,8 +434,8 @@ function getlocations_usermap($uid) {
         if (isset($location['marker']) && ! empty($location['marker'])) {
           $marker = $location['marker'];
         }
-        $name = htmlspecialchars_decode($location['name'] ? strip_tags($location['name']) : strip_tags($account->name), ENT_QUOTES);
-        $latlons[] = array($location['latitude'], $location['longitude'], $location['lid'], $name, $marker, $location['key'], '', '');
+        $name = htmlspecialchars_decode(isset($location['name']) ? strip_tags($location['name']) : strip_tags($account->name), ENT_QUOTES);
+        $latlons[$ct] = array($location['latitude'], $location['longitude'], $location['lid'], $name, $marker, $location['key'], '', '');
 
         $sv_info = FALSE;
         if ($module == 'getlocations_fields' && count($locations) == 1) {
@@ -477,8 +506,8 @@ function getlocations_usersmap() {
           if (isset($location['marker']) && ! empty($location['marker'])) {
             $marker = $location['marker'];
           }
-          $name = htmlspecialchars_decode($location['name'] ? strip_tags($location['name']) : strip_tags($row->name), ENT_QUOTES);
-          $latlons[] = array($location['latitude'], $location['longitude'], $location['lid'], $name, $marker, $location['key'], '', '');
+          $name = htmlspecialchars_decode(isset($location['name']) ? strip_tags($location['name']) : strip_tags($row->name), ENT_QUOTES);
+          $latlons[$ct] = array($location['latitude'], $location['longitude'], $location['lid'], $name, $marker, $location['key'], '', '');
           $ct++;
         }
       }
@@ -538,8 +567,8 @@ function getlocations_termmap($tid) {
           if (isset($location['marker']) && ! empty($location['marker'])) {
             $marker = $location['marker'];
           }
-          $name = htmlspecialchars_decode($location['name'] ? strip_tags($location['name']) : strip_tags($term->name), ENT_QUOTES);
-          $latlons[] = array($location['latitude'], $location['longitude'], $location['lid'], $name, $marker, $location['key'], '', '');
+          $name = htmlspecialchars_decode(isset($location['name']) ? strip_tags($location['name']) : strip_tags($term->name), ENT_QUOTES);
+          $latlons[$ct] = array($location['latitude'], $location['longitude'], $location['lid'], $name, $marker, $location['key'], '', '');
 
           $sv_info = FALSE;
           if ($module == 'getlocations_fields' && count($locations) == 1) {
@@ -615,8 +644,8 @@ function getlocations_commentmap($cid) {
           if (isset($location['marker']) && ! empty($location['marker'])) {
             $marker = $location['marker'];
           }
-          $name = htmlspecialchars_decode($location['name'] ? strip_tags($location['name']) : strip_tags($comment->subject), ENT_QUOTES);
-          $latlons[] = array($location['latitude'], $location['longitude'], $location['lid'], $name, $marker, $location['key'], '', '');
+          $name = htmlspecialchars_decode(isset($location['name']) ? strip_tags($location['name']) : strip_tags($comment->subject), ENT_QUOTES);
+          $latlons[$ct] = array($location['latitude'], $location['longitude'], $location['lid'], $name, $marker, $location['key'], '', '');
 
           $sv_info = FALSE;
           if ($module == 'getlocations_fields' && count($locations) == 1) {
@@ -715,8 +744,8 @@ function getlocations_typemap($type, $loc_key='', $loc_val = '') {
           if (isset($location['marker']) && ! empty($location['marker'])) {
             $marker = $location['marker'];
           }
-          $name = htmlspecialchars_decode($location['name'] ? strip_tags($location['name']) : strip_tags($row->title), ENT_QUOTES);
-          $latlons[] = array($location['latitude'], $location['longitude'], $location['lid'], $name, $marker, $location['key'], '', '');
+          $name = htmlspecialchars_decode(isset($location['name']) ? strip_tags($location['name']) : strip_tags($row->title), ENT_QUOTES);
+          $latlons[$ct] = array($location['latitude'], $location['longitude'], $location['lid'], $name, $marker, $location['key'], '', '');
 
           $sv_info = FALSE;
           if ($module == 'getlocations_fields' && count($locations) == 1) {
@@ -783,7 +812,7 @@ function getlocations_lids($lidlist) {
         $minmaxes = getlocations_do_minmaxes($ct, $location, $minmaxes);
         $location['key'] = '';
         $name = htmlspecialchars_decode(strip_tags($location['name']), ENT_QUOTES);
-        $latlons[] = array($location['latitude'], $location['longitude'], $location['lid'], $name, $location['marker'], $location['key'], '', '');
+        $latlons[$ct] = array($location['latitude'], $location['longitude'], $location['lid'], $name, $location['marker'], $location['key'], '', '');
 
         $sv_info = FALSE;
         if ($module == 'getlocations_fields' && count($locations) == 1) {
@@ -844,7 +873,7 @@ function getlocations_nids($nidlist) {
       foreach ($locs AS $key => $loc) {
         $type = getlocations_get_nodetype($nid);
         if (isset($typemarkers[$type])) {
-           $loc['marker'] = $typemarkers[$type];
+          $loc['marker'] = $typemarkers[$type];
         }
         $locations[] = $loc;
       }
@@ -870,7 +899,7 @@ function getlocations_nids($nidlist) {
           }
         }
         $name = htmlspecialchars_decode(strip_tags($location['name']), ENT_QUOTES);
-        $latlons[] = array($location['latitude'], $location['longitude'], $location['lid'], $name, $location['marker'], $location['key'], '', '');
+        $latlons[$ct] = array($location['latitude'], $location['longitude'], $location['lid'], $name, $location['marker'], $location['key'], '', '');
 
         $sv_info = FALSE;
         if ($module == 'getlocations_fields' && count($locations) == 1) {
@@ -959,7 +988,7 @@ function getlocations_setlocations($latlons, $minmaxes='', $type='node', $node =
     $height = $getlocations_defaults['height'];
   }
 
-  return theme('getlocations_show', array('width' => $width, 'height' => $height, 'defaults' => $getlocations_defaults, 'mapid' => $mapid, 'type' => $type, 'node' => $node));
+  return theme('getlocations_show', array('width' => $width, 'height' => $height, 'defaults' => $getlocations_defaults, 'mapid' => $mapid, 'latlons' => $latlons, 'minmaxes' => $minmaxes, 'type' => $type, 'node' => $node));
 
 }
 
@@ -1002,12 +1031,19 @@ function getlocations_setup_js($defaults, $googleonly = FALSE, $sv = FALSE) {
 
   $key = variable_get('getlocations_api3_key', '');
 
+  $aggr = (getlocations_aggr_get() ? TRUE : FALSE);
+
   // v3 googlemaps API
   $query = array();
   if (! empty($key)) {
     $query['key'] = $key;
   }
   $query['sensor'] = (getlocations_is_mobile() ? 'true' : 'false');
+
+  $map_version = variable_get('getlocations_map_version', '');
+  if ($map_version) {
+    $query['v'] = $map_version;
+  }
 
   if (isset($language->language)) {
     $query['language'] = $language->language;
@@ -1065,8 +1101,11 @@ function getlocations_setup_js($defaults, $googleonly = FALSE, $sv = FALSE) {
     $query['libraries'] = implode(',', $libraries);
   }
 
-  global $is_https;
-  $scheme = ($is_https ? 'https' : 'http');
+  if (! isset($defaults['is_https']) || ! $defaults['is_https']) {
+    global $is_https;
+    $defaults['is_https'] = $is_https;
+  }
+  $scheme = ($defaults['is_https'] ? 'https' : 'http');
   $gmapdomain = "maps.googleapis.com/maps/api/js";
   $gmaplink = url($scheme . '://' . $gmapdomain, array('query' => $query));
   if (!stristr($current_js, $scheme . '://' . $gmapdomain)) {
@@ -1087,6 +1126,18 @@ function getlocations_setup_js($defaults, $googleonly = FALSE, $sv = FALSE) {
     }
   }
 
+  // geocoder-js
+  if ($defaults['geocoder_enable'] && $geocoder_path = getlocations_get_geocoder_path()) {
+    if (!stristr($current_js, $geocoder_path)) {
+      $js_opts = array();
+      $js_opts['weight'] = $getlocations_js_weight;
+      $js_opts['type'] = 'file';
+      $js_opts['preprocess'] = $aggr;
+      drupal_add_js($geocoder_path, $js_opts);
+      $getlocations_js_weight++;
+    }
+  }
+
   if ($googleonly) {
     return;
   }
@@ -1097,6 +1148,7 @@ function getlocations_setup_js($defaults, $googleonly = FALSE, $sv = FALSE) {
     drupal_add_css(GETLOCATIONS_PATH . '/getlocations.css');
   }
 
+
   // streetview only
   if ($sv && module_exists('getlocations_fields')) {
     $getlocations_fields_paths = getlocations_fields_paths_get();
@@ -1104,17 +1156,19 @@ function getlocations_setup_js($defaults, $googleonly = FALSE, $sv = FALSE) {
       $js_opts = array();
       $js_opts['weight'] = $getlocations_js_weight;
       $js_opts['type'] = 'file';
+      $js_opts['preprocess'] = $aggr;
       drupal_add_js($getlocations_fields_paths['getlocations_fields_streetview_path'], $js_opts);
       $getlocations_js_weight++;
     }
     return;
   }
 
-  if (!stristr($current_js, GETLOCATIONS_PATH . '/js/icons.js')) {
+  if (!stristr($current_js, $getlocations_paths['getlocations_icons_path'])) {
     $js_opts = array();
     $js_opts['weight'] = $getlocations_js_weight;
     $js_opts['type'] = 'file';
-    drupal_add_js(GETLOCATIONS_PATH . '/js/icons.js', $js_opts);
+    $js_opts['preprocess'] = $aggr;
+    drupal_add_js($getlocations_paths['getlocations_icons_path'], $js_opts);
     $getlocations_js_weight++;
   }
 
@@ -1123,16 +1177,8 @@ function getlocations_setup_js($defaults, $googleonly = FALSE, $sv = FALSE) {
     $js_opts = array();
     $js_opts['weight'] = $getlocations_js_weight;
     $js_opts['type'] = 'file';
+    $js_opts['preprocess'] = $aggr;
     drupal_add_js($markerfile, $js_opts);
-    $getlocations_js_weight++;
-  }
-
-
-  if ($defaults['geo_enable'] && !stristr($current_js, $getlocations_paths['getlocations_geo_path'])) {
-    $js_opts = array();
-    $js_opts['weight'] = $getlocations_js_weight;
-    $js_opts['type'] = 'file';
-    drupal_add_js($getlocations_paths['getlocations_geo_path'], $js_opts);
     $getlocations_js_weight++;
   }
 
@@ -1140,6 +1186,7 @@ function getlocations_setup_js($defaults, $googleonly = FALSE, $sv = FALSE) {
     $js_opts = array();
     $js_opts['weight'] = $getlocations_js_weight;
     $js_opts['type'] = 'file';
+    $js_opts['preprocess'] = $aggr;
     drupal_add_js($getlocations_paths['markermanager_path'], $js_opts);
     $getlocations_js_weight++;
   }
@@ -1147,6 +1194,7 @@ function getlocations_setup_js($defaults, $googleonly = FALSE, $sv = FALSE) {
     $js_opts = array();
     $js_opts['weight'] = $getlocations_js_weight;
     $js_opts['type'] = 'file';
+    $js_opts['preprocess'] = $aggr;
     drupal_add_js($getlocations_paths['markerclusterer_path'], $js_opts);
     $getlocations_js_weight++;
 
@@ -1167,12 +1215,14 @@ function getlocations_setup_js($defaults, $googleonly = FALSE, $sv = FALSE) {
     $js_opts = array();
     $js_opts['weight'] = $getlocations_js_weight;
     $js_opts['type'] = 'file';
+    $js_opts['preprocess'] = $aggr;
     drupal_add_js($getlocations_paths['infobubble_path'], $js_opts);
     $getlocations_js_weight++;
 
     $js_opts = array();
     $js_opts['weight'] = $getlocations_js_weight;
     $js_opts['type'] = 'file';
+    $js_opts['preprocess'] = $aggr;
     drupal_add_js($getlocations_paths['infobubble_extended_path'], $js_opts);
     $getlocations_js_weight++;
 
@@ -1180,6 +1230,7 @@ function getlocations_setup_js($defaults, $googleonly = FALSE, $sv = FALSE) {
       $js_opts = array();
       $js_opts['weight'] = $getlocations_js_weight;
       $js_opts['type'] = 'file';
+      $js_opts['preprocess'] = $aggr;
       drupal_add_js($getlocations_paths['infobubble_options_path'], $js_opts);
       $getlocations_js_weight++;
     }
@@ -1188,6 +1239,7 @@ function getlocations_setup_js($defaults, $googleonly = FALSE, $sv = FALSE) {
     $js_opts = array();
     $js_opts['weight'] = $getlocations_js_weight;
     $js_opts['type'] = 'file';
+    $js_opts['preprocess'] = $aggr;
     drupal_add_js($getlocations_paths['infowindow_options_path'], $js_opts);
     $getlocations_js_weight++;
   }
@@ -1197,6 +1249,7 @@ function getlocations_setup_js($defaults, $googleonly = FALSE, $sv = FALSE) {
     $js_opts = array();
     $js_opts['weight'] = $getlocations_js_weight;
     $js_opts['type'] = 'file';
+    $js_opts['preprocess'] = $aggr;
     drupal_add_js($getlocations_paths['getlocations_path'], $js_opts);
     $getlocations_js_weight++;
   }
@@ -1206,6 +1259,7 @@ function getlocations_setup_js($defaults, $googleonly = FALSE, $sv = FALSE) {
       $js_opts = array();
       $js_opts['weight'] = $getlocations_js_weight;
       $js_opts['type'] = 'file';
+      $js_opts['preprocess'] = $aggr;
       drupal_add_js($getlocations_paths['getlocations_polygons_path'], $js_opts);
       $getlocations_js_weight++;
     }
@@ -1215,6 +1269,7 @@ function getlocations_setup_js($defaults, $googleonly = FALSE, $sv = FALSE) {
       $js_opts = array();
       $js_opts['weight'] = $getlocations_js_weight;
       $js_opts['type'] = 'file';
+      $js_opts['preprocess'] = $aggr;
       drupal_add_js($getlocations_paths['getlocations_rectangles_path'], $js_opts);
       $getlocations_js_weight++;
     }
@@ -1224,6 +1279,7 @@ function getlocations_setup_js($defaults, $googleonly = FALSE, $sv = FALSE) {
       $js_opts = array();
       $js_opts['weight'] = $getlocations_js_weight;
       $js_opts['type'] = 'file';
+      $js_opts['preprocess'] = $aggr;
       drupal_add_js($getlocations_paths['getlocations_circles_path'], $js_opts);
       $getlocations_js_weight++;
     }
@@ -1233,6 +1289,7 @@ function getlocations_setup_js($defaults, $googleonly = FALSE, $sv = FALSE) {
       $js_opts = array();
       $js_opts['weight'] = $getlocations_js_weight;
       $js_opts['type'] = 'file';
+      $js_opts['preprocess'] = $aggr;
       drupal_add_js($getlocations_paths['getlocations_polylines_path'], $js_opts);
       $getlocations_js_weight++;
     }
@@ -1243,6 +1300,7 @@ function getlocations_setup_js($defaults, $googleonly = FALSE, $sv = FALSE) {
       $js_opts = array();
       $js_opts['weight'] = $getlocations_js_weight;
       $js_opts['type'] = 'file';
+      $js_opts['preprocess'] = $aggr;
       drupal_add_js($getlocations_paths['getlocations_search_places_path'], $js_opts);
       $getlocations_js_weight++;
     }
@@ -1254,6 +1312,7 @@ function getlocations_setup_js($defaults, $googleonly = FALSE, $sv = FALSE) {
       $js_opts = array();
       $js_opts['weight'] = $getlocations_js_weight;
       $js_opts['type'] = 'file';
+      $js_opts['preprocess'] = $aggr;
       drupal_add_js($getlocations_paths['getlocations_categories_path'], $js_opts);
       $getlocations_js_weight++;
     }
@@ -1265,6 +1324,7 @@ function getlocations_setup_js($defaults, $googleonly = FALSE, $sv = FALSE) {
       $js_opts = array();
       $js_opts['weight'] = $getlocations_js_weight;
       $js_opts['type'] = 'file';
+      $js_opts['preprocess'] = $aggr;
       drupal_add_js($getlocations_paths['getlocations_preview_path'], $js_opts);
       $getlocations_js_weight++;
     }
@@ -1276,6 +1336,7 @@ function getlocations_setup_js($defaults, $googleonly = FALSE, $sv = FALSE) {
       $js_opts = array();
       $js_opts['weight'] = $getlocations_js_weight;
       $js_opts['type'] = 'file';
+      $js_opts['preprocess'] = $aggr;
       drupal_add_js($geojson_path, $js_opts);
       $getlocations_js_weight++;
     }
@@ -1284,10 +1345,30 @@ function getlocations_setup_js($defaults, $googleonly = FALSE, $sv = FALSE) {
         $js_opts = array();
         $js_opts['weight'] = $getlocations_js_weight;
         $js_opts['type'] = 'file';
+        $js_opts['preprocess'] = $aggr;
         drupal_add_js($getlocations_paths['getlocations_geojson_path'], $js_opts);
         $getlocations_js_weight++;
       }
     }
+  }
+
+  if ($defaults['geo_enable'] && !stristr($current_js, $getlocations_paths['getlocations_geo_path'])) {
+    $js_opts = array();
+    $js_opts['weight'] = $getlocations_js_weight + 10;
+    $js_opts['type'] = 'file';
+    $js_opts['preprocess'] = $aggr;
+    drupal_add_js($getlocations_paths['getlocations_geo_path'], $js_opts);
+    $getlocations_js_weight++;
+  }
+
+  if (module_exists('field_group') && !stristr($current_js, $getlocations_paths['getlocations_field_group_path'])) {
+    $js_opts = array();
+    $js_opts['weight'] = $getlocations_js_weight + 10;
+    $js_opts['type'] = 'file';
+    $js_opts['preprocess'] = $aggr;
+    drupal_add_js($getlocations_paths['getlocations_field_group_path'], $js_opts);
+    $getlocations_js_weight++;
+
   }
 
 }
@@ -1299,9 +1380,11 @@ function getlocations_setup_js($defaults, $googleonly = FALSE, $sv = FALSE) {
  *   Returns the current settings
  */
 function getlocations_defaults($reset = FALSE) {
+  global $is_https;
   $module = getlocations_get_current_supported_module();
   $defaults = array(
     'api_version'                   => 3,
+    'map_version'                   => '',
     'width'                         => '300px',
     'height'                        => '200px',
     'zoom'                          => 3,
@@ -1315,13 +1398,6 @@ function getlocations_defaults($reset = FALSE) {
     'latlong'                       => '40,0',
     'maptype'                       => 'Map',
     'mtc'                           => 'standard',
-    'baselayers' => array(
-      'Map'                         => 1,
-      'Satellite'                   => 1,
-      'Hybrid'                      => 1,
-      'Physical'                    => 1,
-      'OpenStreetMap'               => 0,
-    ),
     'scale'                         => 0,
     'overview'                      => 0,
     'overview_opened'               => 0,
@@ -1375,6 +1451,7 @@ function getlocations_defaults($reset = FALSE) {
     'markerclusterer_size'          => -1,
     'markerclusterer_minsize'       => -1,
     'markerclusterer_title'         => t('Click here to see more'),
+    'markerclusterer_imgpath'       => base_path() . GETLOCATIONS_PATH . '/js/images',
     'pansetting'                    => 2,
     'draggable'                     => 1,
     'styles'                        => '',
@@ -1464,6 +1541,7 @@ function getlocations_defaults($reset = FALSE) {
     'map_resize'                    => 0,
     'region_bias'                   => variable_get('site_default_country', ''),
     'fullscreen_disable'            => 0,
+    'fullscreen_controlposition'    => '',
     'search_places'                 => 0,
     'search_places_size'            => 40,
     'search_places_position'        => 'outside_above',
@@ -1480,7 +1558,48 @@ function getlocations_defaults($reset = FALSE) {
     'geojson_options'               => '',
     'nokeyboard'                    => 0,
     'nodoubleclickzoom'             => 0,
+    'input_map_show'                => 1,
+    'highlight_enable'              => 0,
+    'highlight_strokecolor'         => "#FF0000",
+    'highlight_strokeopacity'       => "0.8",
+    'highlight_strokeweight'        => "3",
+    'highlight_fillcolor'           => "#FF0000",
+    'highlight_fillopacity'         => "0.35",
+    'highlight_radius'              => 10,
+    'getdirections_link'            => 0,
+    'gps_button'                    => 0,
+    'gps_button_label'              => '',
+    'gps_marker_title'              => '',
+    'gps_marker'                    => '',
+    'gps_bubble'                    => 0,
+    'gps_geocode'                   => 0,
+    'gps_center'                    => 0,
+    'geolocation_mobile_check'      => 1,
+    'is_https'                      => ($is_https ? 1 : 0),
+    'show_search_distance'          => 0,
+    'views_search_marker_enable'           => 0,
+    'views_search_marker'                  => 'drupal',
+    'views_search_marker_toggle'           => 0,
+    'views_search_marker_toggle_active'    => 0,
+    'views_search_radshape_enable'         => 0,
+    'views_search_radshape_strokecolor'    => '#FF0000',
+    'views_search_radshape_strokeopacity'  => '0.8',
+    'views_search_radshape_strokeweight'   => '3',
+    'views_search_radshape_fillcolor'      => '#FF0000',
+    'views_search_radshape_fillopacity'    => '0.35',
+    'views_search_radshape_toggle'         => 0,
+    'views_search_radshape_toggle_active'  => 0,
+    'views_search_center'                  => 0,
+    'geocoder_enable'                      => 0,
   );
+
+  $providers = getlocations_get_map_providers();
+  $baselayers = array();
+  foreach ($providers AS $k => $v) {
+    $baselayers[$k] = $v['default'];
+  }
+  $defaults['baselayers'] = $baselayers;
+
   if ($reset) {
     return $defaults;
   }
@@ -1786,13 +1905,21 @@ function getlocations_get_path_from_lid($lid) {
  * Ajax callback
  * Fetches bubble content
  *
- * @see theme_getlocations_adinfo().
+ * @see theme_getlocations_adinfo()
  */
 function getlocations_adinfo() {
 
   $lid = $_GET['lid'];
   $lidkey = $_GET['key'];
-  $extra = (isset($_GET['sdist']) ? array('sdist' => $_GET['sdist']) : '');
+
+  $extra = FALSE;
+  if (isset($_GET['sdist'])) {
+    $extra['sdist'] = $_GET['sdist'];
+  }
+  if (isset($_GET['gdlink'])) {
+    $extra['gdlink'] = $_GET['gdlink'];
+  }
+
   $content = getlocations_getinfo($lid, $lidkey, $extra);
   drupal_json_output(array('content' => $content));
 
@@ -1855,6 +1982,9 @@ function getlocations_getinfo($lid, $lidkey, $extra=FALSE) {
         $dist = getlocations_distance_between($latlon_a, $latlon_b, $sunit);
         $location['sdist'] = $dist['scalar'];
         $location['sunit'] = $dist['distance_unit'];
+      }
+      if (is_array($extra) && isset($extra['gdlink'])) {
+        $location['getdirections_link'] = $extra['gdlink'];
       }
     }
 
@@ -2524,7 +2654,7 @@ function getlocations_get_nodetype($nid) {
  *
  */
 function getlocations_js_settings_do($defaults, $latlons, $minmaxes, $mapid, $inputmap = FALSE, $extcontrol = '') {
-  global $language, $is_https;
+  global $language;
   $lla = explode(',', $defaults['latlong']);
   $lat = $lla[0];
   $lng = $lla[1];
@@ -2576,12 +2706,10 @@ function getlocations_js_settings_do($defaults, $latlons, $minmaxes, $mapid, $in
       'markerclusterer_size'      => $defaults['markerclusterer_size'],
       'markerclusterer_minsize'   => $defaults['markerclusterer_minsize'],
       'markerclusterer_title'     => $defaults['markerclusterer_title'],
+      'markerclusterer_imgpath'   => $defaults['markerclusterer_imgpath'],
       'pansetting'                => $defaults['pansetting'],
       'draggable'                 => $defaults['draggable'],
       'styles'                    => $defaults['styles'],
-      'datanum'                   => count($latlons),
-      'latlons'                   => $latlons,
-      'minmaxes'                  => (empty($minmaxes) ? '' : implode(',', $minmaxes)),
       'inputmap'                  => ($inputmap ? 1 : 0),
       'extcontrol'                => $extcontrol,
       'custom_content_enable'     => $defaults['custom_content_enable'],
@@ -2598,10 +2726,11 @@ function getlocations_js_settings_do($defaults, $latlons, $minmaxes, $mapid, $in
       'show_bubble_on_one_marker' => $defaults['show_bubble_on_one_marker'],
       'kml_url'                   => $defaults['kml_group']['kml_url'],
       'fullscreen_disable'        => $defaults['fullscreen_disable'],
+      'fullscreen_controlposition' => $defaults['fullscreen_controlposition'],
       'places'                    => $defaults['places'],
       'search_places'             => $defaults['search_places'],
       'getdirections_enabled'     => $defaults['getdirections_enabled'],
-      'is_https'                  => ($is_https ? 1 : 0),
+      'is_https'                  => $defaults['is_https'],
       'geojson_enable'            => $defaults['geojson_enable'],
       'nokeyboard'                => $defaults['nokeyboard'],
       'nodoubleclickzoom'         => $defaults['nodoubleclickzoom'],
@@ -2620,6 +2749,7 @@ function getlocations_js_settings_do($defaults, $latlons, $minmaxes, $mapid, $in
       'sv_imagedatecontrol'       => $defaults['sv_imagedatecontrol'],
       'sv_scrollwheel'            => $defaults['sv_scrollwheel'],
       'sv_clicktogo'              => $defaults['sv_clicktogo'],
+      'input_map_show'            => $defaults['input_map_show'],
     ),
   );
   // only set these if wanted
@@ -2663,6 +2793,55 @@ function getlocations_js_settings_do($defaults, $latlons, $minmaxes, $mapid, $in
     $settings[$mapid]['categories'] = array();
   }
 
+  // highlighting
+  $settings[$mapid]['highlight_enable'] = $defaults['highlight_enable'];
+  if ($defaults['highlight_enable']) {
+    if (! preg_match("/^#/", $defaults['highlight_strokecolor'])) {
+      $defaults['highlight_strokecolor'] = '#' . $defaults['highlight_strokecolor'];
+    }
+    if (! preg_match("/^#/", $defaults['highlight_fillcolor'])) {
+      $defaults['highlight_fillcolor'] = '#' . $defaults['highlight_fillcolor'];
+    }
+    $settings[$mapid]['highlight_strokecolor']   = $defaults['highlight_strokecolor'];
+    $settings[$mapid]['highlight_strokeopacity'] = $defaults['highlight_strokeopacity'];
+    $settings[$mapid]['highlight_strokeweight']  = $defaults['highlight_strokeweight'];
+    $settings[$mapid]['highlight_fillcolor']     = $defaults['highlight_fillcolor'];
+    $settings[$mapid]['highlight_fillopacity']   = $defaults['highlight_fillopacity'];
+    $settings[$mapid]['highlight_radius']        = $defaults['highlight_radius'];
+  }
+  $settings[$mapid]['getdirections_link']        = $defaults['getdirections_link'];
+  $settings[$mapid]['show_search_distance']      = $defaults['show_search_distance'];
+  $settings[$mapid]['views_search_marker_enable']            = $defaults['views_search_marker_enable'];
+  $settings[$mapid]['views_search_radshape_enable']          = $defaults['views_search_radshape_enable'];
+  $settings[$mapid]['views_search_center']                   = $defaults['views_search_center'];
+  if ($defaults['views_search_marker_enable'] || $defaults['views_search_radshape_enable']) {
+    $settings[$mapid]['views_search_marker']                 = $defaults['views_search_marker'];
+    $settings[$mapid]['views_search_marker_toggle']          = $defaults['views_search_marker_toggle'];
+    $settings[$mapid]['views_search_marker_toggle_active']   = $defaults['views_search_marker_toggle_active'];
+    $settings[$mapid]['views_search_radshape_strokecolor']   = $defaults['views_search_radshape_strokecolor'];
+    $settings[$mapid]['views_search_radshape_strokeopacity'] = $defaults['views_search_radshape_strokeopacity'];
+    $settings[$mapid]['views_search_radshape_strokeweight']  = $defaults['views_search_radshape_strokeweight'];
+    $settings[$mapid]['views_search_radshape_fillcolor']     = $defaults['views_search_radshape_fillcolor'];
+    $settings[$mapid]['views_search_radshape_fillopacity']   = $defaults['views_search_radshape_fillopacity'];
+    $settings[$mapid]['views_search_radshape_toggle']        = $defaults['views_search_radshape_toggle'];
+    $settings[$mapid]['views_search_radshape_toggle_active'] = $defaults['views_search_radshape_toggle_active'];
+  }
+
+  // geocoder-js
+  $settings[$mapid]['geocoder_enable'] = $defaults['geocoder_enable'];
+
+  // baselayer settings
+  $providers = getlocations_get_map_providers();
+  $baselayers = $defaults['baselayers'];
+  foreach ($providers AS $k => $v) {
+    if (isset($baselayers[$k]) && $baselayers[$k]) {
+      $settings[$mapid]['baselayer_settings'][$k] = $v;
+    }
+  }
+
+  // field group support;
+  $settings[$mapid]['field_group_enable'] = (module_exists('field_group') ? 1 : 0);
+
   drupal_add_js(array('getlocations' => $settings), 'setting');
 
   if ($defaults['preload_data']) {
@@ -2678,7 +2857,11 @@ function getlocations_js_settings_do($defaults, $latlons, $minmaxes, $mapid, $in
           $info[$ct]['lidkey'] = $latlon[5];
           $info[$ct]['content'] = '';
           if ($defaults['markeraction'] == 1 || $defaults['markeraction'] == 2) {
-            $info[$ct]['content'] = getlocations_getinfo($latlon[2], $latlon[5]);
+            $extra = FALSE;
+            if (isset($defaults['getdirections_link'])) {
+              $extra['gdlink'] = $defaults['getdirections_link'];
+            }
+            $info[$ct]['content'] = getlocations_getinfo($latlon[2], $latlon[5], $extra);
           }
           elseif ($defaults['markeraction'] == 3) {
             $info[$ct]['content'] = getlocations_getlidinfo($latlon[2], $latlon[5]);
@@ -2754,6 +2937,11 @@ function getlocations_js_settings_do($defaults, $latlons, $minmaxes, $mapid, $in
       );
       drupal_add_js(array('getlocations_polylines' => $polyline_settings), 'setting');
     }
+  }
+  // getlocations_gps
+  if (module_exists('getlocations_gps') && isset($defaults['gps_button']) && $defaults['gps_button']) {
+    $getlocations_gps_defaults = getlocations_gps_defaults($defaults);
+    getlocations_gps_js_settings_do($getlocations_gps_defaults, $mapid);
   }
 
 }
@@ -3195,15 +3383,13 @@ function getlocations_element_map_mtc($default) {
  */
 function getlocations_element_map_maptype($default, $baselayers) {
   $options = array();
-  $layers = array(
-    'Map' => t('Standard street map'),
-    'Satellite' => t('Standard satellite map'),
-    'Hybrid' => t('Hybrid satellite map'),
-    'Physical' => t('Terrain map'),
-    'OpenStreetMap' => t('OpenStreet map'),
-  );
+  $providers = getlocations_get_map_providers();
+  $layers = array();
+  foreach ($providers AS $k => $v) {
+    $layers[$k] = $v['title'];
+  }
   foreach ($layers AS $key => $layer) {
-    if ($baselayers[$key]) {
+    if (isset($baselayers[$key]) && $baselayers[$key]) {
       $options[$key] = $layer;
     }
   }
@@ -3228,25 +3414,10 @@ function getlocations_element_map_maptype($default, $baselayers) {
 function getlocations_element_map_baselayers($view, $default) {
   // Map Satellite Hybrid Physical
   $title = FALSE;
-  if ($view == 'Map') {
-    $title = t('Standard street map');
-    $description = t('The standard default street map.');
-  }
-  elseif ($view == 'Satellite') {
-    $title = t('Standard satellite map');
-    $description = t('Satellite view without street overlay.');
-  }
-  elseif ($view == 'Hybrid') {
-    $title = t('Hybrid satellite map');
-    $description = t('Satellite view with street overlay.');
-  }
-  elseif ($view == 'Physical') {
-    $title = t('Terrain map');
-    $description = t('Map with physical data (terrain, vegetation.)');
-  }
-  elseif ($view == 'OpenStreetMap') {
-    $title = t('OpenStreet map');
-    $description = t('Map from the OpenStreetMap Foundation.');
+  $providers = getlocations_get_map_providers();
+  if (isset($providers[$view])) {
+    $title = $providers[$view]['title'];
+    $description = $providers[$view]['description'];
   }
   if ($title) {
     $element = getlocations_element_map_checkbox($title, $default, $description);
@@ -3435,6 +3606,330 @@ function getlocations_element_dd($title, $default, $options, $description = '', 
   return $element;
 }
 
+function getlocations_get_map_providers() {
+  // support hook_getlocations_map_providers
+  $providers = module_invoke_all('getlocations_map_providers');
+  return $providers;
+}
+
+function getlocations_getlocations_map_providers() {
+  $osm_attrib = '&copy; <a target="_blank" href="http://www.openstreetmap.org">OpenStreetMap</a> contributors, <a target="_blank" href="http://www.openstreetmap.org/copyright">ODBL</a>';
+  $stamen_attrib = 'Tiles &copy; <a target="_blank" href="http://stamen.com">Stamen Design</a>, <a target="_blank" href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; ' . $osm_attrib;
+  $esri_attrib = 'Tiles &copy; <a target="_blank" href="http://www.esri.com/">Esri</a>';
+  $providers = array(
+    'Map' => array(
+      'title' => t('Standard street map'),
+      'short_title' => t('Map'),
+      'description' => t('The standard default street map.'),
+      'default' => 1,
+      'minzoom' => 0,
+      'maxzoom' => 20,
+      'url' => '',
+      'attribution' => '',
+      'tilesize' => 256,
+    ),
+    'Satellite' => array(
+      'title' => t('Standard satellite map'),
+      'short_title' => t('Satellite'),
+      'description' => t('Satellite view without street overlay.'),
+      'default' => 1,
+      'minzoom' => 0,
+      'maxzoom' => 20,
+      'url' => '',
+      'attribution' => '',
+      'tilesize' => 256,
+    ),
+    'Hybrid' => array(
+      'title' => t('Hybrid satellite map'),
+      'short_title' => t('Hybrid'),
+      'description' => t('Satellite view with street overlay.'),
+      'default' => 1,
+      'minzoom' => 0,
+      'maxzoom' => 20,
+      'url' => '',
+      'attribution' => '',
+      'tilesize' => 256,
+    ),
+    'Physical' => array(
+      'title' => t('Terrain map'),
+      'short_title' => t('Terrain'),
+      'description' => t('Map with physical data (terrain, vegetation.)'),
+      'default' => 1,
+      'minzoom' => 0,
+      'maxzoom' => 20,
+      'url' => '',
+      'attribution' => '',
+      'tilesize' => 256,
+    ),
+    'OSM' => array(
+      'title' => t('OpenStreet map'),
+      'short_title' => t('OSM map'),
+      'description' => t('Map from the OpenStreetMap Foundation.'),
+      'default' => 0,
+      'minzoom' => 1,
+      'maxzoom' => 18,
+      'url' => "http://tile.openstreetmap.org/__Z__/__X__/__Y__.png",
+      'attribution' => $osm_attrib,
+      'tilesize' => 256,
+    ),
+    'OSMBW' => array(
+      'title' => t('OpenStreetMap Black and White'),
+      'short_title' => t('OSM BW'),
+      'description' => t('Map from the OpenStreetMap Foundation, black and white version.'),
+      'default' => 0,
+      'minzoom' => 1,
+      'maxzoom' => 18,
+      'url' => "http://www.toolserver.org/tiles/bw-mapnik/__Z__/__X__/__Y__.png",
+      'attribution' => $osm_attrib,
+      'tilesize' => 256,
+    ),
+    'OSMDE' => array(
+      'title' => t('OpenStreetMap DE'),
+      'short_title' => t('OSM DE'),
+      'description' => t('German OpenStreet map'),
+      'default' => 0,
+      'minzoom' => 1,
+      'maxzoom' => 18,
+      'url' => "http://tile.openstreetmap.de/tiles/osmde/__Z__/__X__/__Y__.png",
+      'attribution' => $osm_attrib,
+      'tilesize' => 256,
+    ),
+    'OCM' => array(
+      'title' => t('OpenCycleMap'),
+      'short_title' => t('OCM'),
+      'description' => '',
+      'default' => 0,
+      'minzoom' => 1,
+      'maxzoom' => 18,
+      'url' => "http://tile.opencyclemap.org/cycle/__Z__/__X__/__Y__.png",
+      'attribution' => '&copy; <a target="_blank" href="http://www.opencyclemap.org" >OpenCycleMap</a>, ' . $osm_attrib,
+      'tilesize' => 256,
+    ),
+    'OCMT' => array(
+      'title' => t('OpenCycleMap Transport'),
+      'short_title' => t('OCM Transport'),
+      'description' => '',
+      'default' => 0,
+      'minzoom' => 1,
+      'maxzoom' => 18,
+      'url' => "http://tile.opencyclemap.org/transport/__Z__/__X__/__Y__.png",
+      'attribution' => '&copy; <a target="_blank" href="http://www.opencyclemap.org" >OpenCycleMap</a>, ' . $osm_attrib,
+      'tilesize' => 256,
+    ),
+    'OCML' => array(
+      'title' => t('OpenCycleMap Landscape'),
+      'short_title' => t('OCM Landscape'),
+      'description' => '',
+      'default' => 0,
+      'minzoom' => 1,
+      'maxzoom' => 18,
+      'url' => "http://tile.opencyclemap.org/landscape/__Z__/__X__/__Y__.png",
+      'attribution' => '&copy; <a target="_blank" href="http://www.opencyclemap.org" >OpenCycleMap</a>, ' . $osm_attrib,
+      'tilesize' => 256,
+    ),
+    'OCMO' => array(
+      'title' => t('OpenCycleMap Outdoors'),
+      'short_title' => t('OCM Outdoors'),
+      'description' => '',
+      'default' => 0,
+      'minzoom' => 1,
+      'maxzoom' => 18,
+      'url' => "http://tile.thunderforest.com/outdoors/__Z__/__X__/__Y__.png",
+      'attribution' => '&copy; <a target="_blank" href="http://www.opencyclemap.org" >OpenCycleMap</a>, ' . $osm_attrib,
+      'tilesize' => 256,
+    ),
+    'Stamen' => array(
+      'title' => t('Stamen Toner'),
+      'short_title' => t('ST'),
+      'description' => '',
+      'default' => 0,
+      'minzoom' => 1,
+      'maxzoom' => 18,
+      'url' => "http://tile.stamen.com/toner/__Z__/__X__/__Y__.png",
+      'attribution' => $stamen_attrib,
+      'tilesize' => 256,
+    ),
+    'StamenBG' => array(
+      'title' => t('Stamen Toner-background'),
+      'short_title' => t('STBG'),
+      'description' => '',
+      'default' => 0,
+      'minzoom' => 0,
+      'maxzoom' => 18,
+      'url' => "http://tile.stamen.com/toner-background/__Z__/__X__/__Y__.png",
+      'attribution' => $stamen_attrib,
+      'tilesize' => 256,
+    ),
+    'StamenHY' => array(
+      'title' => t('Stamen Toner-hybrid'),
+      'short_title' => t('STHY'),
+      'description' => '',
+      'default' => 0,
+      'minzoom' => 1,
+      'maxzoom' => 18,
+      'url' => "http://tile.stamen.com/toner-hybrid/__Z__/__X__/__Y__.png",
+      'attribution' => $stamen_attrib,
+      'tilesize' => 256,
+    ),
+    'StamenLI' => array(
+      'title' => t('Stamen Toner-lines'),
+      'short_title' => t('STLI'),
+      'description' => '',
+      'default' => 0,
+      'minzoom' => 1,
+      'maxzoom' => 18,
+      'url' => "http://tile.stamen.com/toner-lines/__Z__/__X__/__Y__.png",
+      'attribution' => $stamen_attrib,
+      'tilesize' => 256,
+    ),
+    'StamenLA' => array(
+      'title' => t('Stamen Toner-labels'),
+      'short_title' => t('STLA'),
+      'description' => '',
+      'default' => 0,
+      'minzoom' => 1,
+      'maxzoom' => 18,
+      'url' => "http://tile.stamen.com/toner-labels/__Z__/__X__/__Y__.png",
+      'attribution' => $stamen_attrib,
+      'tilesize' => 256,
+    ),
+    'StamenLT' => array(
+      'title' => t('Stamen Toner-lite'),
+      'short_title' => t('STLT'),
+      'description' => '',
+      'default' => 0,
+      'minzoom' => 1,
+      'maxzoom' => 18,
+      'url' => "http://tile.stamen.com/toner-lite/__Z__/__X__/__Y__.png",
+      'attribution' => $stamen_attrib,
+      'tilesize' => 256,
+    ),
+    'Watercolor' => array(
+      'title' => t('Watercolor'),
+      'short_title' => t('STWC'),
+      'description' => '',
+      'default' => 0,
+      'minzoom' => 1,
+      'maxzoom' => 18,
+      'url' => "http://tile.stamen.com/watercolor/__Z__/__X__/__Y__.jpg",
+      'attribution' => $stamen_attrib,
+      'tilesize' => 256,
+    ),
+    'ESRI' => array(
+      'title' => t('Esri'),
+      'short_title' => t('Esri'),
+      'description' => '',
+      'default' => 0,
+      'minzoom' => 1,
+      'maxzoom' => 17,
+      'url' => "http://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/__Z__/__Y__/__X__",
+      'attribution' => $esri_attrib,
+      'tilesize' => 256,
+    ),
+    'DeLorme' => array(
+      'title' => t('Esri DeLorme'),
+      'short_title' => t('DeLorme'),
+      'description' => '',
+      'default' => 0,
+      'minzoom' => 1,
+      'maxzoom' => 11,
+      'url' => "http://server.arcgisonline.com/ArcGIS/rest/services/Specialty/DeLorme_World_Base_Map/MapServer/tile/__Z__/__Y__/__X__",
+      'attribution' => $esri_attrib . ' &mdash; &copy;2012 DeLorme',
+      'tilesize' => 256,
+    ),
+    'WorldTopoMap' => array(
+      'title' => t('Esri Topo'),
+      'short_title' => t('Topo'),
+      'description' => '',
+      'default' => 0,
+      'minzoom' => 1,
+      'maxzoom' => 18,
+      'url' => "http://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/__Z__/__Y__/__X__",
+      'attribution' => $esri_attrib . ' &mdash; DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community',
+      'tilesize' => 256,
+    ),
+    'WorldImagery' => array(
+      'title' => t('Esri Imagery'),
+      'short_title' => t('Imagery'),
+      'description' => '',
+      'default' => 0,
+      'minzoom' => 1,
+      'maxzoom' => 18,
+      'url' => "http://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/__Z__/__Y__/__X__",
+      'attribution' => $esri_attrib . ' &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+      'tilesize' => 256,
+    ),
+    'WorldTerrain' => array(
+      'title' => t('Esri Terrain'),
+      'short_title' => t('Terrain'),
+      'description' => '',
+      'default' => 0,
+      'minzoom' => 1,
+      'maxzoom' => 9,
+      'url' => "http://server.arcgisonline.com/ArcGIS/rest/services/World_Terrain_Base/MapServer/tile/__Z__/__Y__/__X__",
+      'attribution' => $esri_attrib . ' &mdash; Source: USGS, Esri, TANA, DeLorme, and NPS',
+      'tilesize' => 256,
+    ),
+    'WorldShadedRelief' => array(
+      'title' => t('Esri Shaded'),
+      'short_title' => t('Shaded'),
+      'description' => '',
+      'default' => 0,
+      'minzoom' => 1,
+      'maxzoom' => 13,
+      'url' => "http://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/__Z__/__Y__/__X__",
+      'attribution' => $esri_attrib . '',
+      'tilesize' => 256,
+    ),
+    'WorldPhysical' => array(
+      'title' => t('Esri Physical'),
+      'short_title' => t('Physical'),
+      'description' => '',
+      'default' => 0,
+      'minzoom' => 1,
+      'maxzoom' => 8,
+      'url' => "http://server.arcgisonline.com/ArcGIS/rest/services/World_Physical_Map/MapServer/tile/__Z__/__Y__/__X__",
+      'attribution' => $esri_attrib . ' &mdash; US National Park Service',
+      'tilesize' => 256,
+    ),
+    'OceanBasemap' => array(
+      'title' => t('Esri Ocean'),
+      'short_title' => t('Ocean'),
+      'description' => '',
+      'default' => 0,
+      'minzoom' => 1,
+      'maxzoom' => 13,
+      'url' => "http://services.arcgisonline.com/ArcGIS/rest/services/Ocean_Basemap/MapServer/tile/__Z__/__Y__/__X__",
+      'attribution' => $esri_attrib . ' &mdash; GEBCO, NOAA, CHS, OSU, UNH, CSUMB, National Geographic, DeLorme, NAVTEQ',
+      'tilesize' => 256,
+    ),
+    'NatGeoWorldMap' => array(
+      'title' => t('Esri Geo'),
+      'short_title' => t('Esri Geo'),
+      'description' => '',
+      'default' => 0,
+      'minzoom' => 1,
+      'maxzoom' => 12,
+      'url' => "http://services.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/tile/__Z__/__Y__/__X__",
+      'attribution' => $esri_attrib . ' &mdash; National Geographic, Esri, DeLorme, NAVTEQ, UNEP-WCMC, USGS, NASA, ESA, METI, NRCAN, GEBCO, NOAA, iPC',
+      'tilesize' => 256,
+    ),
+    'WorldGrayCanvas' => array(
+      'title' => t('Esri Canvas'),
+      'short_title' => t('Esri Canvas'),
+      'description' => '',
+      'default' => 0,
+      'minzoom' => 1,
+      'maxzoom' => 16,
+      'url' => "http://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/__Z__/__Y__/__X__",
+      'attribution' => $esri_attrib . ' &mdash; Esri, DeLorme, NAVTEQ',
+      'tilesize' => 256,
+    ),
+  );
+  return $providers;
+}
+
+
 /**
  * Function
  *
@@ -3584,10 +4079,16 @@ function getlocations_map_display_options_form($defaults, $config = TRUE, $extra
   );
   $form['mapcontrolposition']['#suffix'] = '</div>';
 
-  // a hack to get this in
-  if (! isset($defaults['baselayers']['OpenStreetMap'])) {
-    $defaults['baselayers']['OpenStreetMap'] = 0;
+  $getlocations_defaults = getlocations_defaults();
+
+  // get baselayers in
+  $baselayers = $getlocations_defaults['baselayers'];
+  foreach ($baselayers AS $k => $v) {
+    if (! isset($defaults['baselayers'][$k])) {
+      $defaults['baselayers'][$k] = $v;
+    }
   }
+
   // make sure at least one layer is set
   $found = FALSE;
   foreach ($defaults['baselayers'] AS $key => $value) {
@@ -3600,9 +4101,13 @@ function getlocations_map_display_options_form($defaults, $config = TRUE, $extra
     $defaults['maptype'] = 'Map';
   }
 
-  $form['maptype'] = getlocations_element_map_maptype($defaults['maptype'], $defaults['baselayers']);
+  // backward compat
+  if (isset($defaults['baselayers']['OpenStreetMap'])) {
+    $defaults['baselayers']['OSM'] = $defaults['baselayers']['OpenStreetMap'];
+    unset($defaults['baselayers']['OpenStreetMap']);
+  }
 
-  $getlocations_defaults = getlocations_defaults();
+  $form['maptype'] = getlocations_element_map_maptype($defaults['maptype'], $defaults['baselayers']);
 
   $form['baselayers'] =  array(
     '#type' => 'fieldset',
@@ -3695,9 +4200,30 @@ function getlocations_map_display_options_form($defaults, $config = TRUE, $extra
       $form['jquery_colorpicker_enabled'] = array('#type' => 'value', '#value' => 0);
     }
 
+    $form['is_https'] = getlocations_element_map_checkbox(
+      t('Force https maps'),
+      $defaults['is_https']
+    );
+
   }
 
   if ($extras) {
+
+    // getlocations_gps
+    if (module_exists('getlocations_gps')) {
+      $form += getlocations_gps_map_display_options_form($defaults);
+
+      $form['geolocation_mobile_check'] = array(
+        '#type' => 'checkbox',
+        '#title' => t('Enable check for mobiles'),
+        '#default_value' => $defaults['geolocation_mobile_check'],
+        '#return_value' => 1,
+        '#description' => t('Enable geolocation for mobile devices only.'),
+      );
+    }
+    else {
+      $form['geolocation_mobile_check'] = array('#type' => 'value', '#value' => 0);
+    }
 
     $form['sv_show'] = getlocations_element_map_checkbox(
       t('Show streetview Pegman'),
@@ -3714,7 +4240,7 @@ function getlocations_map_display_options_form($defaults, $config = TRUE, $extra
     $form['show_maplinks'] = getlocations_element_map_checkbox(
       t('Show map links'),
       $defaults['show_maplinks'],
-      t('Show a list of links to popup InfoWindow/InfoBubble on the map.')
+      t('Show a list of links to popup InfoWindow/InfoBubble/Link on the map.')
     );
 
     $form['show_bubble_on_one_marker'] = getlocations_element_map_checkbox(
@@ -3727,6 +4253,13 @@ function getlocations_map_display_options_form($defaults, $config = TRUE, $extra
       t('Show Fullscreen button'),
       $defaults['fullscreen']
     );
+    $form['fullscreen']['#suffix'] = '<div id="wrap-getlocations-fs-show">';
+    $form['fullscreen_controlposition'] = getlocations_element_dd(
+      t('Position of Fullscreen button'),
+      $defaults['fullscreen_controlposition'],
+      $controlpositions
+    );
+    $form['fullscreen_controlposition']['#suffix'] = '</div>';
 
     $form['trafficinfo'] = getlocations_element_map_checkbox(
       t('Enable Traffic information'),
@@ -3903,135 +4436,15 @@ function getlocations_map_display_options_form($defaults, $config = TRUE, $extra
 
     $form += getlocations_shapes_form($defaults, $source);
 
-    // KML
-    $form['kml_group'] = array(
-      '#type' => 'fieldset',
-      '#title' => t('Kml file'),
-      '#description' => t('Attach a kml file.'),
-      '#collapsible' => TRUE,
-      '#collapsed' => (empty($defaults['kml_group']['kml_url']) ? TRUE : FALSE ),
-      '#tree' => TRUE,
-    );
-    $form['kml_group']['kml_url'] = getlocations_element_map_tf(
-      t('Kml url'),
-      $defaults['kml_group']['kml_url'],
-      t('A full url to a publicly accessible kml file.')
-    );
-    $form['kml_group']['kml_url_click'] = getlocations_element_map_checkbox(
-      t('Kml layer clickable'),
-      $defaults['kml_group']['kml_url_click']
-    );
-    $form['kml_group']['kml_url_infowindow'] = getlocations_element_map_checkbox(
-      t('Suppress Kml layer InfoWindows'),
-      $defaults['kml_group']['kml_url_infowindow']
-    );
-    $form['kml_group']['kml_url_viewport'] = getlocations_element_map_checkbox(
-      t('Preserve viewport'),
-      $defaults['kml_group']['kml_url_viewport']
-    );
-    $form['kml_group']['kml_url_button'] = getlocations_element_map_checkbox(
-      t('Show toggle button'),
-      $defaults['kml_group']['kml_url_button']
-    );
-    $form['kml_group']['kml_url_button_label'] = getlocations_element_map_tf(
-      t('Label for toggle button'),
-      $defaults['kml_group']['kml_url_button_label'],
-      '',
-      30
-    );
-    $form['kml_group']['kml_url_button_state'] = getlocations_element_map_checkbox(
-      t('Activate Kml layer'),
-      $defaults['kml_group']['kml_url_button_state'],
-      t('Activate Kml layer when map is first displayed.')
-    );
+    $form += getlocations_kml_form($defaults);
 
-    // geojson
-    if (getlocations_get_geojson_path()) {
-      $form['geojson_enable'] = getlocations_element_map_checkbox(
-        t('Enable GeoJSON library'),
-        $defaults['geojson_enable'],
-        t('Show GeoJSON data if defined')
-      );
-      $form['geojson_enable']['#suffix'] = '<div id="wrap-getlocations-geojson-enable">';
-      $form['geojson_data'] = array(
-        '#type' => 'textarea',
-        '#title' => t('GeoJSON data'),
-        '#default_value' => $defaults['geojson_data'],
-        '#description' => t('A GeoJSON object. For more information about GeoJSON see !u', array('!u' => l(t('geojson.org'), 'http://www.geojson.org/', array('attributes' => array('target' => '_blank'))))),
-      );
-      $form['geojson_options'] = array(
-        '#type' => 'textarea',
-        '#title' => t('GeoJSON options'),
-        '#default_value' => $defaults['geojson_options'],
-        '#description' => t('A JSON object.'),
-      );
-      $form['geojson_options']['#suffix'] = '</div>';
-    }
-    else {
-      $form['geojson_enable'] = array('#type' => 'value', '#value' => 0);
-      $form['geojson_data'] = array('#type' => 'value', '#value' => '');
-      $form['geojson_options'] = array('#type' => 'value', '#value' => '');
-    }
+    $form += getlocations_geojson_form($defaults);
 
-    // search_places
-    // enable
-    $desc = t('Provide a textfield to query Google Places Search.');
-    if ($config) {
-      $desc .= ' ' . t('This will be enabled for all maps if enabled here.');
-    }
-    $form['search_places'] = getlocations_element_map_checkbox(
-      t('Enable Google Places Search'),
-      $defaults['search_places'],
-      $desc
-    );
-    $form['search_places']['#suffix'] = '<div id="wrap-getlocations-search-places">';
-    // size
-    $form['search_places_size'] = getlocations_element_map_tf(
-      t('Textbox width'),
-      $defaults['search_places_size'],
-      t('The width of the Google Places Search textbox. Must be a positive number.'),
-      10,
-      10,
-      TRUE
-    );
-    // placement
-    $pos = array(
-      'outside_above' => t('Above the map'),
-      'outside_below' => t('Below the map'),
-    );
-    $form['search_places_position'] = getlocations_element_dd(
-      t('Textbox Position'),
-      $defaults['search_places_position'],
-      $pos,
-      t('The position of the Google Places Search textbox.')
-    );
-    // label
-    $form['search_places_label'] = getlocations_element_map_tf(
-      t('Textbox label'),
-      $defaults['search_places_label'],
-      t('The label for the Google Places Search textbox.'),
-      30,
-      40
-    );
-    // placeholder
-    $form['search_places_placeholder'] = getlocations_element_map_tf(
-      t('Text in Textbox'),
-      $defaults['search_places_placeholder'],
-      t('The text inside the Google Places Search textbox. Leave empty for the default.'),
-      30,
-      40
-    );
-    // list
-    $form['search_places_list'] = getlocations_element_map_checkbox(
-      t('Provide a List of what was found linked to a bubble'),
-      $defaults['search_places_list']
-    );
-    // dropdown
-    $form['search_places_dd'] = getlocations_element_map_checkbox(
-      t('Provide a Dropdown instead of a Textbox for Google Places Search'),
-      $defaults['search_places_dd']
-    );
-    $form['search_places_dd']['#suffix'] = '</div>';
+    $form += getlocations_highlight_form($defaults);
+
+    $form += getlocations_geocoder_form($defaults);
+
+    $form += getlocations_google_places_form($defaults, $config);
 
     if ($config) {
       $form['places'] = array(
@@ -4431,6 +4844,314 @@ function getlocations_shapes_form($defaults, $source) {
   return $form;
 }
 
+function getlocations_geojson_form($defaults) {
+  // geojson
+
+  $form = array();
+  if (getlocations_get_geojson_path()) {
+    $form['geojson_enable'] = getlocations_element_map_checkbox(
+      t('Enable GeoJSON library'),
+      $defaults['geojson_enable'],
+      t('Show GeoJSON data if defined')
+    );
+    $form['geojson_enable']['#suffix'] = '<div id="wrap-getlocations-geojson-enable">';
+    $form['geojson_data'] = array(
+      '#type' => 'textarea',
+      '#title' => t('GeoJSON data'),
+      '#default_value' => $defaults['geojson_data'],
+      '#description' => t('A GeoJSON object. For more information about GeoJSON see !u', array('!u' => l(t('geojson.org'), 'http://www.geojson.org/', array('attributes' => array('target' => '_blank'))))),
+    );
+    $form['geojson_options'] = array(
+      '#type' => 'textarea',
+      '#title' => t('GeoJSON options'),
+      '#default_value' => $defaults['geojson_options'],
+      '#description' => t('A JSON object.'),
+    );
+    $form['geojson_options']['#suffix'] = '</div>';
+  }
+  else {
+    $form['geojson_enable'] = array('#type' => 'value', '#value' => 0);
+    $form['geojson_data'] = array('#type' => 'value', '#value' => '');
+    $form['geojson_options'] = array('#type' => 'value', '#value' => '');
+  }
+  return $form;
+
+}
+
+function getlocations_kml_form($defaults) {
+  // KML
+  $form = array();
+  $form['kml_group'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Kml file'),
+    '#description' => t('Attach a kml file.'),
+    '#collapsible' => TRUE,
+    '#collapsed' => (empty($defaults['kml_group']['kml_url']) ? TRUE : FALSE ),
+    '#tree' => TRUE,
+  );
+  $form['kml_group']['kml_url'] = getlocations_element_map_tf(
+    t('Kml url'),
+    $defaults['kml_group']['kml_url'],
+    t('A full url to a publicly accessible kml file.')
+  );
+  $form['kml_group']['kml_url_click'] = getlocations_element_map_checkbox(
+    t('Kml layer clickable'),
+    $defaults['kml_group']['kml_url_click']
+  );
+  $form['kml_group']['kml_url_infowindow'] = getlocations_element_map_checkbox(
+    t('Suppress Kml layer InfoWindows'),
+    $defaults['kml_group']['kml_url_infowindow']
+  );
+  $form['kml_group']['kml_url_viewport'] = getlocations_element_map_checkbox(
+    t('Preserve viewport'),
+    $defaults['kml_group']['kml_url_viewport']
+  );
+  $form['kml_group']['kml_url_button'] = getlocations_element_map_checkbox(
+    t('Show toggle button'),
+    $defaults['kml_group']['kml_url_button']
+  );
+  $form['kml_group']['kml_url_button_label'] = getlocations_element_map_tf(
+    t('Label for toggle button'),
+    $defaults['kml_group']['kml_url_button_label'],
+    '',
+    30
+  );
+  $form['kml_group']['kml_url_button_state'] = getlocations_element_map_checkbox(
+    t('Activate Kml layer'),
+    $defaults['kml_group']['kml_url_button_state'],
+    t('Activate Kml layer when map is first displayed.')
+  );
+
+  return $form;
+}
+
+function getlocations_highlight_form($defaults) {
+  // marker highlighting
+  $form = array();
+  $form['highlight_enable'] = getlocations_element_map_checkbox(
+    t('Enable Marker highlighting'),
+    $defaults['highlight_enable'],
+    t('Highlight a marker with a circle on mouseover')
+  );
+  $form['highlight_enable']['#suffix'] = '<div id="wrap-getlocations-highlight">';
+  if (module_exists('jquery_colorpicker') && $defaults['jquery_colorpicker_enabled']) {
+    $form['highlight_strokecolor'] = array(
+      '#type' => 'jquery_colorpicker',
+      '#title' => t('Highlight Circle line color'),
+      '#default_value' => preg_replace("/^#/", '', $defaults['highlight_strokecolor']),
+      '#description' => t('Click on the Colorpicker icon to select a color'),
+    );
+  }
+  else {
+    $form['highlight_strokecolor'] = getlocations_element_map_tf(
+      t('Highlight Circle line color'),
+      $defaults['highlight_strokecolor'],
+      t('HTML hex, eg #FF0000.'),
+      10,
+      10,
+      TRUE
+    );
+  }
+
+  $form['highlight_strokeopacity'] = getlocations_element_map_tf(
+    t('Highlight Circle line opacity'),
+    $defaults['highlight_strokeopacity'],
+    t('Must be between 0 and 1.'),
+    10,
+    10,
+    TRUE
+  );
+  $form['highlight_strokeweight'] = getlocations_element_map_tf(
+    t('Highlight Circle line thickness'),
+    $defaults['highlight_strokeweight'],
+    t('Must be an integer.'),
+    10,
+    10,
+    TRUE
+  );
+
+  // jquery_colorpicker
+  if (module_exists('jquery_colorpicker') && $defaults['jquery_colorpicker_enabled']) {
+    $form['highlight_fillcolor'] = array(
+      '#type' => 'jquery_colorpicker',
+      '#title' => t('Highlight Circle fill color'),
+      '#default_value' => preg_replace("/^#/", '', $defaults['highlight_fillcolor']),
+      '#description' => t('Click on the Colorpicker icon to select a color'),
+    );
+  }
+  else {
+    $form['highlight_fillcolor'] = getlocations_element_map_tf(
+      t('Highlight Circle fill color'),
+      $defaults['highlight_fillcolor'],
+      t('HTML hex, eg #FF0000.'),
+      10,
+      10,
+      TRUE
+    );
+  }
+
+  $form['highlight_fillopacity'] = getlocations_element_map_tf(
+    t('Highlight Circle fill opacity'),
+    $defaults['highlight_fillopacity'],
+    t('Must be between 0 and 1.'),
+    10,
+    10,
+    TRUE
+  );
+  $form['highlight_radius'] = getlocations_element_map_tf(
+    t('Highlight Circle size'),
+    $defaults['highlight_radius'],
+    t("The size of the highlight circle, 10 or 20 recommended."),
+    5,
+    5,
+    TRUE
+  );
+  $form['highlight_radius']['#suffix'] = '</div>';
+  return $form;
+}
+
+function getlocations_google_places_form($defaults, $config) {
+  // search_places
+  $form = array();
+  // enable
+  $desc = t('Provide a textfield to query Google Places Search.');
+  if ($config) {
+    $desc .= ' ' . t('This will be enabled for all maps if enabled here.');
+  }
+  $form['search_places'] = getlocations_element_map_checkbox(
+    t('Enable Google Places Search'),
+    $defaults['search_places'],
+    $desc
+  );
+  $form['search_places']['#suffix'] = '<div id="wrap-getlocations-search-places">';
+  // size
+  $form['search_places_size'] = getlocations_element_map_tf(
+    t('Textbox width'),
+    $defaults['search_places_size'],
+    t('The width of the Google Places Search textbox. Must be a positive number.'),
+    10,
+    10,
+    TRUE
+  );
+  // placement
+  $pos = array(
+    'outside_above' => t('Above the map'),
+    'outside_below' => t('Below the map'),
+  );
+  $form['search_places_position'] = getlocations_element_dd(
+    t('Textbox Position'),
+    $defaults['search_places_position'],
+    $pos,
+    t('The position of the Google Places Search textbox.')
+  );
+  // label
+  $form['search_places_label'] = getlocations_element_map_tf(
+    t('Textbox label'),
+    $defaults['search_places_label'],
+    t('The label for the Google Places Search textbox.'),
+    30,
+    40
+  );
+  // placeholder
+  $form['search_places_placeholder'] = getlocations_element_map_tf(
+    t('Text in Textbox'),
+    $defaults['search_places_placeholder'],
+    t('The text inside the Google Places Search textbox. Leave empty for the default.'),
+    30,
+    40
+  );
+  // list
+  $form['search_places_list'] = getlocations_element_map_checkbox(
+    t('Provide a List of what was found linked to a bubble'),
+    $defaults['search_places_list']
+  );
+  // dropdown
+  $form['search_places_dd'] = getlocations_element_map_checkbox(
+    t('Provide a Dropdown instead of a Textbox for Google Places Search'),
+    $defaults['search_places_dd']
+  );
+  $form['search_places_dd']['#suffix'] = '</div>';
+
+  return $form;
+}
+
+function getlocations_geocoder_form($defaults) {
+  $form = array();
+  if (getlocations_get_geocoder_path()) {
+    $form['geocoder_enable'] = getlocations_element_dd(
+      t('Geocoder type'),
+      $defaults['geocoder_enable'],
+      array(0 => t('Quick Google Search'), 1 => t('Full Google Search'), 2 => t('OpenStreetMap Search')),
+      t('The type of geocoder to use. Quick Google search only applies if Google Autocomplete has been used.')
+    );
+  }
+  else {
+    $form['geocoder_enable'] = array('#type' => 'value', '#value' => 0);
+  }
+  return $form;
+}
+
+function getlocations_markermanager_form($defaults) {
+  $form = array();
+  $form['usemarkermanager'] = getlocations_element_map_checkbox(
+    t('Use Marker manager'),
+    $defaults['usemarkermanager'],
+    t('Use Marker manager. Switching this off will use no manager.')
+  );
+
+  $form['minzoom'] = getlocations_element_map_zoom(
+    t('Minimum Zoom'),
+    $defaults['minzoom'],
+    t('The Minimum zoom level at which markers will be visible.')
+  );
+
+  $form['maxzoom'] = getlocations_element_map_zoom(
+    t('Maximum Zoom'),
+    $defaults['maxzoom'],
+    t('The Maximum zoom level at which markers will be visible.')
+  );
+  return $form;
+}
+
+function getlocations_markercluster_form($defaults) {
+
+  if (file_exists(GETLOCATIONS_PATH . '/getlocations.markercluster_override.inc')) {
+    module_load_include('inc', 'getlocations', 'getlocations.markercluster_override');
+  }
+  else {
+    module_load_include('inc', 'getlocations', 'getlocations.markercluster');
+  }
+
+  $form = array();
+
+  $form['useclustermanager'] = getlocations_element_map_checkbox(
+    t('Use Cluster manager'),
+    $defaults['useclustermanager'],
+    t('Use Cluster manager. Switching this off will use no manager.')
+  );
+  $form['markerclusterer_style'] = getlocations_element_markerclusterer_style($defaults['markerclusterer_style']);
+  $form['markerclusterer_imgpath'] = getlocations_element_map_tf(
+    t('Markerclusterer image path'),
+    $defaults['markerclusterer_imgpath'],
+    '',
+    40,
+    255
+  );
+  $form['markerclusterer_title'] = getlocations_element_map_tf(
+    t('Markerclusterer tooltip'),
+    $defaults['markerclusterer_title'],
+    t('The text of a Markerclusterer tooltip'),
+    30,
+    64,
+    TRUE
+  );
+  $form['markerclusterer_zoom'] = getlocations_element_markerclusterer_zoom($defaults['markerclusterer_zoom']);
+  $form['markerclusterer_size'] = getlocations_element_markerclusterer_size($defaults['markerclusterer_size']);
+  $form['markerclusterer_minsize'] = getlocations_element_markerclusterer_minsize($defaults['markerclusterer_minsize']);
+
+  return $form;
+}
+
 /**
  * Function
  *
@@ -4440,27 +5161,64 @@ function getlocations_shapes_form($defaults, $source) {
  *   Returns array of javascript paths
  *
  */
-function getlocations_paths_get($reset = FALSE) {
+function getlocations_paths_get($reset = FALSE, $min = FALSE) {
+  if ($min) {
+    $defaults = array(
+      'infobubble_path'                 => GETLOCATIONS_PATH . '/js/infobubble.min.js',
+      'infobubble_options_path'         => GETLOCATIONS_PATH . '/js/infobubble_options.js',
+      'infobubble_extended_path'        => GETLOCATIONS_PATH . '/js/infobubble_extended.min.js',
+      'markermanager_path'              => GETLOCATIONS_PATH . '/js/markermanager_packed.js',
+      'markerclusterer_path'            => GETLOCATIONS_PATH . '/js/markerclusterer_packed.js',
+      'infowindow_options_path'         => GETLOCATIONS_PATH . '/js/infowindow_options.js',
+      'getlocations_path'               => GETLOCATIONS_PATH . '/js/getlocations.min.js',
+      'getlocations_polygons_path'      => GETLOCATIONS_PATH . '/js/getlocations_polygons.min.js',
+      'getlocations_rectangles_path'    => GETLOCATIONS_PATH . '/js/getlocations_rectangles.min.js',
+      'getlocations_circles_path'       => GETLOCATIONS_PATH . '/js/getlocations_circles.min.js',
+      'getlocations_polylines_path'     => GETLOCATIONS_PATH . '/js/getlocations_polylines.min.js',
+      'getlocations_categories_path'    => GETLOCATIONS_PATH . '/js/getlocations_categories.min.js',
+      'getlocations_search_places_path' => GETLOCATIONS_PATH . '/js/getlocations_search_places.min.js',
+      'getlocations_geo_path'           => GETLOCATIONS_PATH . '/js/getlocations_geo.min.js',
+      'getlocations_preview_path'       => GETLOCATIONS_PATH . '/js/getlocations_preview.min.js',
+      'getlocations_geojson_path'       => GETLOCATIONS_PATH . '/js/getlocations_geojson.min.js',
+      'getlocations_admin_path'         => GETLOCATIONS_PATH . '/js/getlocations_admin.min.js',
+      'getlocations_box_path'           => GETLOCATIONS_PATH . '/js/getlocations_box.min.js',
+      'getlocations_colorbox_path'      => GETLOCATIONS_PATH . '/js/getlocations_colorbox.min.js',
+      'getlocations_marker_box_path'    => GETLOCATIONS_PATH . '/js/getlocations_marker_box.min.js',
+      'getlocations_views_path'         => GETLOCATIONS_PATH . '/js/getlocations_views.min.js',
+      'getlocations_icons_path'         => GETLOCATIONS_PATH . '/js/icons.min.js',
+      'getlocations_field_group_path'   => GETLOCATIONS_PATH . '/js/getlocations_field_group.min.js',
+    );
+  }
+  else {
+    $defaults = array(
+      'infobubble_path'                 => GETLOCATIONS_PATH . '/js/infobubble.js',
+      'infobubble_options_path'         => GETLOCATIONS_PATH . '/js/infobubble_options.js',
+      'infobubble_extended_path'        => GETLOCATIONS_PATH . '/js/infobubble_extended.js',
+      'markermanager_path'              => GETLOCATIONS_PATH . '/js/markermanager.js',
+      'markerclusterer_path'            => GETLOCATIONS_PATH . '/js/markerclusterer.js',
+      'infowindow_options_path'         => GETLOCATIONS_PATH . '/js/infowindow_options.js',
+      'getlocations_path'               => GETLOCATIONS_PATH . '/js/getlocations.js',
+      'getlocations_polygons_path'      => GETLOCATIONS_PATH . '/js/getlocations_polygons.js',
+      'getlocations_rectangles_path'    => GETLOCATIONS_PATH . '/js/getlocations_rectangles.js',
+      'getlocations_circles_path'       => GETLOCATIONS_PATH . '/js/getlocations_circles.js',
+      'getlocations_polylines_path'     => GETLOCATIONS_PATH . '/js/getlocations_polylines.js',
+      'getlocations_categories_path'    => GETLOCATIONS_PATH . '/js/getlocations_categories.js',
+      'getlocations_search_places_path' => GETLOCATIONS_PATH . '/js/getlocations_search_places.js',
+      'getlocations_geo_path'           => GETLOCATIONS_PATH . '/js/getlocations_geo.js',
+      'getlocations_preview_path'       => GETLOCATIONS_PATH . '/js/getlocations_preview.js',
+      'getlocations_geojson_path'       => GETLOCATIONS_PATH . '/js/getlocations_geojson.js',
+      'getlocations_admin_path'         => GETLOCATIONS_PATH . '/js/getlocations_admin.js',
+      'getlocations_box_path'           => GETLOCATIONS_PATH . '/js/getlocations_box.js',
+      'getlocations_colorbox_path'      => GETLOCATIONS_PATH . '/js/getlocations_colorbox.js',
+      'getlocations_marker_box_path'    => GETLOCATIONS_PATH . '/js/getlocations_marker_box.js',
+      'getlocations_views_path'         => GETLOCATIONS_PATH . '/js/getlocations_views.js',
+      'getlocations_icons_path'         => GETLOCATIONS_PATH . '/js/icons.js',
+      'getlocations_field_group_path'   => GETLOCATIONS_PATH . '/js/getlocations_field_group.js',
+    );
 
-  $defaults = array(
-    'infobubble_path'                 => GETLOCATIONS_PATH . '/js/infobubble.js',
-    'infobubble_options_path'         => GETLOCATIONS_PATH . '/js/infobubble_options.js',
-    'infobubble_extended_path'        => GETLOCATIONS_PATH . '/js/infobubble_extended.js',
-    'markermanager_path'              => GETLOCATIONS_PATH . '/js/markermanager.js',
-    'markerclusterer_path'            => GETLOCATIONS_PATH . '/js/markerclusterer.js',
-    'infowindow_options_path'         => GETLOCATIONS_PATH . '/js/infowindow_options.js',
-    'getlocations_path'               => GETLOCATIONS_PATH . '/js/getlocations.js',
-    'getlocations_polygons_path'      => GETLOCATIONS_PATH . '/js/getlocations_polygons.js',
-    'getlocations_rectangles_path'    => GETLOCATIONS_PATH . '/js/getlocations_rectangles.js',
-    'getlocations_circles_path'       => GETLOCATIONS_PATH . '/js/getlocations_circles.js',
-    'getlocations_polylines_path'     => GETLOCATIONS_PATH . '/js/getlocations_polylines.js',
-    'getlocations_categories_path'    => GETLOCATIONS_PATH . '/js/getlocations_categories.js',
-    'getlocations_search_places_path' => GETLOCATIONS_PATH . '/js/getlocations_search_places.js',
-    'getlocations_geo_path'           => GETLOCATIONS_PATH . '/js/getlocations_geo.js',
-    'getlocations_preview_path'       => GETLOCATIONS_PATH . '/js/getlocations_preview.js',
-    'getlocations_geojson_path'       => GETLOCATIONS_PATH . '/js/getlocations_geojson.js',
-  );
-  if ($reset) {
+  }
+
+  if ($reset || $min) {
     $getlocations_paths = $defaults;
   }
   else {
@@ -4522,6 +5280,10 @@ function getlocations_colorbox_settings() {
   );
   $colorbox_settings =  variable_get('getlocations_colorbox', $colorbox_defaults);
   $getlocations_colorbox = getlocations_adjust_vars($colorbox_defaults, $colorbox_settings);
+  if (! module_exists('colorbox')) {
+    $getlocations_colorbox['enable'] = 0;
+    $getlocations_colorbox['marker_enable'] = 0;
+  }
   return $getlocations_colorbox;
 }
 
@@ -4851,6 +5613,22 @@ function getlocations_get_geojson_path() {
 }
 
 /**
+ * Function to get the path to the Geocoder-js library
+ *
+ * @param
+ *
+ * @return
+ *   Returns string or false
+ *
+ */
+function getlocations_get_geocoder_path() {
+  if ($path = libraries_get_path('geocoder-js')) {
+    return $path . '/geocoder.min.js';
+  }
+  return FALSE;
+}
+
+/**
  * Function to run string through check_plain but then restore apostrophes
  *
  * @param
@@ -5114,7 +5892,7 @@ function getlocations_dim_check($string) {
   if (!is_string($string) || empty($string)) {
     return FALSE;
   }
-  $s = strtolower(trim($string));
+  $s = drupal_strtolower(trim($string));
   $matches = array();
   if (preg_match('/^([\d.]+)\s*(em|ex|px|in|cm|mm|pt|pc|%)$/', $s, $matches)) {
     return $matches[1] . $matches[2];
@@ -5625,13 +6403,16 @@ function getlocations_normalizelng($lng) {
 /**
  * Function
  *
- * @param
+ * @param bool $override
  *
  * @return
- *   Returns
+ *   Returns TRUE if user agent says its a mobile device
  *
  */
-function getlocations_is_mobile() {
+function getlocations_is_mobile($override = FALSE) {
+  if ($override) {
+    return TRUE;
+  }
   $getlocations_ua = getlocations_ua_get();
   $str = "/" . $getlocations_ua['ua_string'] . "/i";
   $is_mobile = FALSE;
@@ -5655,6 +6436,20 @@ function getlocations_ua_get() {
   $default = array('ua_string' => "iphone|ipad|android|blackberry|blazer|bolt|symbian|mobile safari|fennec|gobrowser|iemobile|maemo browser|profile midp|minimo|kindle|opera mini|opera mobi|skyfire|teashark|uzardweb");
   $getlocations_ua = variable_get('getlocations_ua', $default);
   return $getlocations_ua;
+}
+
+/**
+ * Function
+ *
+ * @param
+ *
+ * @return
+ *   Returns
+ *
+ */
+function getlocations_aggr_get() {
+  $getlocations_aggr = variable_get('getlocations_aggr', 1);
+  return $getlocations_aggr;
 }
 
 /**
@@ -5754,6 +6549,23 @@ function getlocations_controlpositions($dd = TRUE) {
 }
 
 /**
+ * Allows for aliases in entity types
+ *
+ */
+function getlocations_get_entity_type_from_path($path) {
+  $entity_type = $path;
+  // getlocations path => entity_type
+  $aliases = array(
+    'term' => 'taxonomy_term',
+  );
+  if (isset($aliases[$path])) {
+    $entity_type = $aliases[$path];
+  }
+
+  return $entity_type;
+}
+
+/**
  * Given two points in lat/lon form, returns the distance between them.
  * @param $latlon_a
  *   An associative array where
@@ -5841,6 +6653,8 @@ function getlocations_theme() {
         'height' => '',
         'defaults' => '',
         'mapid' => '',
+        'latlons' => '',
+        'minmaxes' => '',
         'type' => '',
         'node' => '',
       ),
@@ -5887,7 +6701,7 @@ function getlocations_theme() {
       ),
     ),
     'getlocations_lidinfo' => array(
-      'variables' =>array(
+      'variables' => array(
         'lid' => '',
         'lidkey' => '',
       ),
@@ -5921,6 +6735,10 @@ function theme_getlocations_show($variables) {
   $mapid = $variables['mapid'];
   $type = $variables['type'];
   $node = $variables['node'];
+
+  $latlons = $variables['latlons'];
+  $minmaxes = $variables['minmaxes'];
+  $datanum = count($latlons);
 
   $output = '';
   $returnlink = FALSE;
@@ -5971,7 +6789,7 @@ function theme_getlocations_show($variables) {
 
   if ($defaults['map_resize'] && getlocations_is_mobile()) {
     $width = '100%';
-    $height = '100%';
+    #$height = '100%';
   }
 
   // show maplinks if enabled
@@ -6118,10 +6936,39 @@ function theme_getlocations_show($variables) {
     $output .= $sp;
   }
 
+  // type class
+  $class = '';
+  if ($type) {
+    $class = ' getlocations_' . $type;
+  }
+
   // wrap the map
+  $output .= '<div class="getlocations_map_wrapper_inner' . $class . '">';
   $output .= '<div id="getlocations_map_wrapper_' . $mapid . '"  style="width: ' . $width . '; height: ' . $height . '" >';
   $output .= '<div class="getlocations_map_canvas" id="getlocations_map_canvas_' . $mapid . '" style="width: 100%; height: 100%" ></div>';
   $output .= '</div>';
+  $output .= '</div>'; // getlocations_map_wrapper_inner
+
+
+  // give each map its own data
+  $localdata = json_encode(array(
+    'datanum'  => $datanum,
+    'latlons'  => $latlons,
+    'minmaxes' => $minmaxes
+  ));
+  $output .= "\n" . '<script type="text/javascript">' . "\n" . '<!--//--><![CDATA[//><!--' . "\n";
+  $output .= 'Drupal.getlocations_data["' . $mapid . '"] = ' . $localdata . ';' . "\n";
+  $output .= '//--><!]]>' . "\n" . '</script>' . "\n";
+
+  // show_search_distance
+  if (module_exists('getlocations_fields') && isset($defaults['search_dist_info'])) {
+    $output .= '<div id="getlocations_fields_search_views_search_wrapper_' . $mapid . '" class="js-hide">';
+    $output .= '<div id="getlocations_fields_search_views_search_units_' . $mapid . '">' . $defaults['search_dist_info']['search_units'] . '</div>';
+    $output .= '<div id="getlocations_fields_search_views_search_latitude_' . $mapid . '">' . $defaults['search_dist_info']['latitude'] . '</div>';
+    $output .= '<div id="getlocations_fields_search_views_search_longitude_' . $mapid . '">' . $defaults['search_dist_info']['longitude'] . '</div>';
+    $output .= '<div id="getlocations_fields_search_views_search_distance_meters_' . $mapid . '">' . getlocations_convert_distance_to_meters($defaults['search_dist_info']['search_distance'], $defaults['search_dist_info']['search_units']) . '</div>';
+    $output .= '</div>';
+  }
 
   // show maplinks if enabled
   if ($defaults['show_maplinks']) {
@@ -6147,6 +6994,16 @@ function theme_getlocations_show($variables) {
     }
     if ($defaults['weather_cloud']) {
       $buttons[] = '<input type="button" value="' . t('Clouds !t', array('!t' => ($defaults['weather_cloud_state'] ? t('Off') : t('On')))) . '" id="getlocations_toggleCloud_' . $mapid . '" class="form-submit" />';
+    }
+  }
+
+  // views_search_marker
+  if (module_exists('getlocations_fields') && isset($defaults['search_dist_info'])) {
+    if ($defaults['views_search_marker_enable'] && $defaults['views_search_marker_toggle']) {
+      $buttons[] = '<input type="button" value="' . t('Search marker !t', array('!t' => ($defaults['views_search_marker_toggle_active'] ? t('Off') : t('On')))) . '" id="getlocations_toggleSearchMarker_' . $mapid . '" class="form-submit" />';
+    }
+    if ($defaults['views_search_radshape_enable'] && $defaults['views_search_radshape_toggle']) {
+      $buttons[] = '<input type="button" value="' . t('Search area !t', array('!t' => ($defaults['views_search_radshape_toggle_active'] ? t('Off') : t('On')))) . '" id="getlocations_toggleSearchArea_' . $mapid . '" class="form-submit" />';
     }
   }
 
@@ -6178,6 +7035,11 @@ function theme_getlocations_show($variables) {
     if (isset($defaults['do_search_marker']) && $defaults['do_search_marker'] && $defaults['search_marker_toggle']) {
       $buttons[] = '<input type="button" value="' . t('Marker !t', array('!t' => ($defaults['search_marker_toggle_active'] ? t('Off') : t('On')))) . '" id="getlocations_search_toggleMarker_' . $mapid . '" class="form-submit" />';
     }
+  }
+
+  // getlocations_gps
+  if (module_exists('getlocations_gps')) {
+    $buttons[] = theme('getlocations_gps_button', array('defaults' => $defaults, 'mapid' => $mapid));
   }
 
   if (count($buttons)) {
@@ -6311,6 +7173,27 @@ function theme_getlocations_adinfo($variables) {
     }
     $output .= '<div class="search-distance">' . number_format(floatval($location['sdist']), 2) . "&nbsp;" . $unit_disp . '</div>';
   }
+
+  if (module_exists('getdirections') && isset($location['getdirections_link']) && $location['getdirections_link']) {
+    $gdlink = '';
+    if (isset($location['nid']) && $location['nid']) {
+      $gdlink = l(t('Directions'), 'getdirections/location/to/' . $location['nid'], array('attributes' => array('class' => array('getlocations_infolink'), 'target' => '_parent')));
+    }
+    elseif (isset($location['uid']) && $location['uid']) {
+      $gdlink = l(t('Directions'), 'getdirections/location_user/to/' . $location['uid'], array('attributes' => array('class' => array('getlocations_infolink'), 'target' => '_parent')));
+    }
+    elseif (isset($location['cid']) && $location['cid'] && getdirections_check_entity_type('comment')) {
+      $gdlink = l(t('Directions'), 'getdirections/location_comment/to/' . $location['cid'], array('attributes' => array('class' => array('getlocations_infolink'), 'target' => '_parent')));
+    }
+    elseif (isset($location['tid']) && $location['tid'] && getdirections_get_vocabularies()) {
+      $gdlink = l(t('Directions'), 'getdirections/location_term/to/' . $location['tid'], array('attributes' => array('class' => array('getlocations_infolink'), 'target' => '_parent')));
+    }
+    if ($gdlink) {
+      $output .= '<div class="getdirections-link">' . $gdlink . '</div>';
+    }
+  }
+
+
   $output .= '</div>';
 
   return $output;
@@ -6329,7 +7212,8 @@ function template_preprocess_getlocations_box(&$variables) {
   if (module_exists('admin_menu')) {
     admin_menu_suppress();
   }
-  drupal_add_js(GETLOCATIONS_PATH . '/js/getlocations_box.js');
+  $getlocations_paths = getlocations_paths_get();
+  drupal_add_js($getlocations_paths['getlocations_box_path']);
 
   // Construct page title
   if (drupal_get_title()) {
@@ -6378,7 +7262,8 @@ function template_preprocess_getlocations_marker_box(&$variables) {
   if (module_exists('admin_menu')) {
     admin_menu_suppress();
   }
-  drupal_add_js(GETLOCATIONS_PATH . '/js/getlocations_marker_box.js');
+  $getlocations_paths = getlocations_paths_get();
+  drupal_add_js($getlocations_paths['getlocations_marker_box_path']);
 
   $head_title = t('Getlocations markers');
   $variables['head_title'] = $head_title;
@@ -6537,7 +7422,7 @@ function theme_getlocations_settings_form($variables) {
   $minmaxes = '';
   $latlons = array();
   getlocations_js_settings_do($getlocations_defaults, $latlons, $minmaxes, $mapid, FALSE, $getlocations_defaults['extcontrol']);
-  $preview_map = theme('getlocations_show', array('width' => $getlocations_defaults['width'] , 'height' => $getlocations_defaults['height'] , 'defaults' => $getlocations_defaults, 'mapid' => $mapid, 'type' => '', 'node' => ''));
+  $preview_map = theme('getlocations_show', array('width' => $getlocations_defaults['width'] , 'height' => $getlocations_defaults['height'] , 'defaults' => $getlocations_defaults, 'mapid' => $mapid, 'latlons' => $latlons, 'minmaxes' => $minmaxes, 'type' => '', 'node' => ''));
   $form['getlocations_preview']['preview_map']['#markup'] = '<div id="getlocations_preview_map">' . $preview_map . '</div>';
 
   $output .= drupal_render_children($form);
@@ -6572,7 +7457,7 @@ function theme_getlocations_plugin_style_map_options_form($variables) {
           foreach ($types AS $type => $name) {
             $field_names = getlocations_get_fieldname2($type, 'node');
             foreach ($field_names AS $field_name) {
-              $mkey = 'node_marker__' . strtolower($type) . '__' . $field_name;
+              $mkey = 'node_marker__' . drupal_strtolower($type) . '__' . $field_name;
               $link = getlocations_markerpicker_link($form[$mkey]['#id'], 'n');
               $form[$mkey]['#field_suffix'] = '&nbsp;' . $link;
             }
@@ -6624,6 +7509,12 @@ function theme_getlocations_plugin_style_map_options_form($variables) {
         $form['comment_map_marker']['#field_suffix'] = '&nbsp;' . $link;
       }
     }
+  }
+
+  if (isset($form['gps_button']) && $form['gps_button']['#type'] !== 'value' ) {
+    $form['gps_button']['#prefix'] = '<fieldset class="collapsible getlocations_fieldset form-wrapper"><legend><span class="fieldset-legend">' . t('GPS Button') . '</span></legend><div class="fieldset-wrapper">';
+    $tsuf = $form['gps_center']['#suffix'];
+    $form['gps_center']['#suffix'] = $tsuf . '</div></fieldset>';
   }
 
   $output = drupal_render_children($form);

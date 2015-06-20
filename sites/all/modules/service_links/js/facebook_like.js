@@ -3,8 +3,8 @@
     attach: function (context, settings) {
       $('a.service-links-facebook-like', context).each(function(){
         var iframe = document.createElement('iframe');
+
         iframe.src = $(this).attr('href').replace('http://', '//');
-        //iframe.src = $(this).attr('href').replace('http://', '//').replace(/http[s]*\%3A\/\//, '');
         iframe.setAttribute('scrolling', 'no');
         iframe.setAttribute('frameborder', 0);
         iframe.setAttribute('allowTransparency', 'true');

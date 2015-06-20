@@ -20,6 +20,12 @@ function nodeviewcount_views_data() {
   $data['nodeviewcount']['nid'] = array(
     'title' => t('Node id'),
     'help' => t('Node id.'),
+    'relationship' => array(
+      'base' => 'node',
+      'field' => 'nid',
+      'handler' => 'views_handler_relationship',
+      'label' => t('Node View Count Node'),
+    ),
     'field' => array(
       'handler' => 'views_handler_field_numeric',
       'click sortable' => TRUE,
@@ -37,6 +43,12 @@ function nodeviewcount_views_data() {
   $data['nodeviewcount']['uid'] = array(
     'title' => t('Who view'),
     'help' => t('Who view  of node.'),
+    'relationship' => array(
+      'base' => 'users',
+      'field' => 'uid',
+      'handler' => 'views_handler_relationship',
+      'label' => t('Node View Count User'),
+    ),
     'field' => array(
       'handler' => 'views_handler_field_numeric',
       'click sortable' => TRUE,

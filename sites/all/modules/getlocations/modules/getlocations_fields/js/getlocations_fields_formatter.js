@@ -1,6 +1,7 @@
 
 /**
  * @file
+ * getlocations_fields_formatter.js
  * @author Bob Hutchinson http://drupal.org/user/52366
  * @copyright GNU GPL
  *
@@ -282,6 +283,21 @@
         }
       });
 
+      if ($("input[id$=fullscreen]").attr('checked')) {
+        $("#wrap-getlocations-fs-show").show();
+      }
+      else {
+        $("#wrap-getlocations-fs-show").hide();
+      }
+      $("input[id$=fullscreen]").change(function() {
+        if ($(this).attr('checked')) {
+          $("#wrap-getlocations-fs-show").show();
+        }
+        else {
+          $("#wrap-getlocations-fs-show").hide();
+        }
+      });
+
       // streetview overlay settings
       if ($("input[id$=sv-addresscontrol]").attr('checked')) {
         $("#wrap-getlocations-sv-addresscontrol").show();
@@ -326,7 +342,60 @@
         }
       });
 
+      if ($("input[id$=highlight-enable]").attr('checked')) {
+        $("#wrap-getlocations-highlight").show();
+      }
+      else {
+        $("#wrap-getlocations-highlight").hide();
+      }
+      $("input[id$=highlight-enable]").change(function() {
+        if ($(this).attr('checked')) {
+          $("#wrap-getlocations-highlight").show();
+        }
+        else {
+          $("#wrap-getlocations-highlight").hide();
+        }
+      });
 
+      // search marker
+      if ($("input[id$=views-search-marker-enable]").is('input')) {
+        if ( $("input[id$=views-search-marker-enable]").attr('checked')) {
+          $("#wrap-getlocations-views-search-marker").show();
+        }
+        else {
+          $("#wrap-getlocations-views-search-marker").hide();
+        }
+        $("input[id$=views-search-marker-enable]").change(function() {
+          if ($(this).attr('checked')) {
+            $("#wrap-getlocations-views-search-marker").show();
+          }
+          else {
+            $("#wrap-getlocations-views-search-marker").hide();
+          }
+        });
+      }
+
+      // search area shape
+      if ($("input[id$=views-search-radshape-enable]").is('input')) {
+        if ($("input[id$=views-search-radshape-enable]").attr('checked')) {
+          $("#wrap-getlocations-views-search-radshape").show();
+        }
+        else {
+          $("#wrap-getlocations-views-search-radshape").hide();
+        }
+        $("input[id$=views-search-radshape-enable]").change(function() {
+          if ($(this).attr('checked')) {
+            $("#wrap-getlocations-views-search-radshape").show();
+          }
+          else {
+            $("#wrap-getlocations-views-search-radshape").hide();
+          }
+        });
+      }
+////////
+
+
+////////
     }
   };
 }(jQuery));

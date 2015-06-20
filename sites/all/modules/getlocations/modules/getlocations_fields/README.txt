@@ -1,7 +1,3 @@
-tip for increasing marker positioning accuracy.
-after getlocations_fields has been installed, using phpmyadmin or similar,
-change the latitude and longitude fields by setting the size to '10,6'
-
 Views for Getlocations Fields
 
 Name: Getlocations
@@ -36,7 +32,6 @@ Configure extra settings for sort criterion Getlocations Fields: Distance
 Make sure it is pointing to the right Location to use.
 
 In Block 5 you will want to do the Format > Getlocations > Settings
-Exposing forms in blocks with maps does NOT work at present.
 
 In Block 6 there is no further configuration required.
 You might want to try exposing the Pager, Distance or Order. Remember to set ajax to Yes
@@ -97,9 +92,21 @@ Description: Find locations by country in argument
 Path: /getlocations_by_country/nn
 where nn is the country code
 
+Name: Getlocations search nearby
+Description: Provides a map and form using Google Autocomplete search
+Path: /getlocations_search_nearby
+The exposed form contains a Google Autocomplete textbox, Unit selector and Distance textbox.
+This form can be configured to appear with the page or in a block.
+
+In the View, under "Advanced", if "Exposed form in block" is "yes"
+make sure the block "Exposed form: getlocations_search_nearby-page_1" is enabled in the sidebar.
+Make sure it is configured with "Only the listed pages" set to "getlocations_search_nearby"
+If you set "Exposed form in block" to "no" it will appear with the map.
+
 
 All of the views may need to be limited to one or more content-types, depending on your use case.
 
+To show phone,fax or mobile fields add Getlocations_fields: Data to your fields list and select the field you want from the dropdown.
 
 An example of a PHP snippet in Getlocations Fields Distance / Proximity Filter
 to provide the latitude/longitude of the current user as supplied by the
@@ -137,7 +144,7 @@ eg
 theme_getlocations_fields_show() becomes MYTHEME_getlocations_fields_show() where MYTHEME is the name of your theme.
 You can edit it there to suit your needs.
 
-These functions can be found in the file getlocations_fields.theme.inc
+These functions can be found in the file getlocations_fields.module
 
 Theming the Getlocations Fields display.
 This is done with function theme_getlocations_fields_show()
@@ -153,4 +160,3 @@ This is done with function theme_getlocations_fields_field_widget_form()
 
 Theming the Getlocations Fields defaults settings form.
 This is done with function theme_getlocations_fields_settings_form()
-

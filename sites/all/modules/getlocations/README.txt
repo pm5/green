@@ -1,4 +1,7 @@
 for Drupal 7
+
+Getlocations 1.x
+
 Getlocations will provide a Google maps API version 3 enabled map on which to
 display markers of locations found in location-enabled content-types.
 
@@ -7,12 +10,26 @@ Before installing getlocations please ensure that you have the libraries module 
 
 You can fetch markers from dropbox:
 As tarballs:
-http://dl.dropbox.com/u/41489105/Drupal/getlocations/getlocations-markers.tar.gz (required)
-http://dl.dropbox.com/u/41489105/Drupal/getlocations/getlocations-markers-extra.tar.gz
+https://dl.dropboxusercontent.com/u/41489105/Drupal/getlocations/getlocations-markers.tar.gz (required)
+https://dl.dropboxusercontent.com/u/41489105/Drupal/getlocations/getlocations-markers-extra.tar.gz
+https://dl.dropboxusercontent.com/u/41489105/Drupal/getlocations/getlocations-markers-various.tar.gz
+https://dl.dropboxusercontent.com/u/41489105/Drupal/getlocations/getlocations-markers-various-small.tar.gz
+https://dl.dropboxusercontent.com/u/41489105/Drupal/getlocations/getlocations-markers-restaurants-bars.tar.gz
+https://dl.dropboxusercontent.com/u/41489105/Drupal/getlocations/getlocations-markers-hairlines.tar.gz
+https://dl.dropboxusercontent.com/u/41489105/Drupal/getlocations/getlocations-markers-circular.tar.gz
+https://dl.dropboxusercontent.com/u/41489105/Drupal/getlocations/getlocations-markers-micons.tar.gz
+https://dl.dropboxusercontent.com/u/41489105/Drupal/getlocations/getlocations-markers-paddle.tar.gz
 
-As zipfles:
-http://dl.dropbox.com/u/41489105/Drupal/getlocations/getlocations-markers.zip (required)
-http://dl.dropbox.com/u/41489105/Drupal/getlocations/getlocations-markers-extra.zip
+As zipfiles:
+https://dl.dropboxusercontent.com/u/41489105/Drupal/getlocations/getlocations-markers.zip (required)
+https://dl.dropboxusercontent.com/u/41489105/Drupal/getlocations/getlocations-markers-extra.zip
+https://dl.dropboxusercontent.com/u/41489105/Drupal/getlocations/getlocations-markers-various.zip
+https://dl.dropboxusercontent.com/u/41489105/Drupal/getlocations/getlocations-markers-various-small.zip
+https://dl.dropboxusercontent.com/u/41489105/Drupal/getlocations/getlocations-markers-restaurants-bars.zip
+https://dl.dropboxusercontent.com/u/41489105/Drupal/getlocations/getlocations-markers-hairlines.zip
+https://dl.dropboxusercontent.com/u/41489105/Drupal/getlocations/getlocations-markers-circular.zip
+https://dl.dropboxusercontent.com/u/41489105/Drupal/getlocations/getlocations-markers-micons.zip
+https://dl.dropboxusercontent.com/u/41489105/Drupal/getlocations/getlocations-markers-paddle.zip
 
 Download the file(s) and place them into your libraries folder so you have
 a path something like this:
@@ -90,15 +107,8 @@ it is the client browser not the server that is doing the work so you need to
 test on slow machines and basic handheld devices to determine the best
 settings for your site.
 
-If you have hundreds of markers make sure that the markermanager is enabled and
-that the markers are not all in the viewport at once, at least not on the map
-as it is initially set up.
-This applies especially to the
-"/getlocations/type/zzz"
-map which shows all the markers (of a given content-type)
-
-Alternately you can use the MarkerClusterer feature, useful if you have many markers
-near each other.
+If you have many markers you can use MarkerClusterer to control your markers.
+There is also a Markermanager but it is not as reliable.
 
 If you have the Colorbox module installed and enabled in Get Locations
 you can place any of the above paths in a colorbox iframe by replacing
@@ -161,7 +171,7 @@ Content: Title
 Content: Nid (make sure this has 'Rewrite the output of this field' and 'Output this field as a link' switched off)
 latitude
 longitude
-Content: Type
+Content: Type (set to Output machine name)
 
 They should be in that order.
 exclude all from display except Content: Nid
@@ -211,13 +221,13 @@ Theming.
 Getlocations pages can be themed by copying the relevant function to your theme's template.php,
 renaming it in the usual manner.
 eg
-theme_getlocations_info() becomes MYTHEME_getlocations_info() where MYTHEME is the name of your theme.
+theme_getlocations_adinfo() becomes MYTHEME_getlocations_adinfo() where MYTHEME is the name of your theme.
 You can edit it there to suit your needs.
 
 These functions can be found in the file getlocations.module
 
 Theming the content of InfoWindow or InfoBubble.
-This is done with function theme_getlocations_info()
+This is done with function theme_getlocations_adinfo()
 
 Theming the map display.
 This is done with function theme_getlocations_show()
@@ -304,8 +314,28 @@ sites/all/libraries/GeoJSON/GeoJSON.js
 
 Once the library is installed you can enable it globally, per view or per content type
 
+Geocoder-js
+The geocoder-js library provides support for the search facilities from Openstreetmap
+You can download the library from https://github.com/geocoder-php/geocoder-js.
+You should copy the file from dist/geocoder.min.js to sites/all/libraries/geocoder-js/geocoder.min.js
+
+Once the library is installed you can enable it globally, per content type or in getlocations_search.
+
 Drush integration for getlocations.
 'drush getlocations-markers' will install the basic getlocations marker set
 'drush getlocations-geojson' will install the GeoJSON javascript library
+'drush getlocations-geocoder' will install the Geocoder-js javascript library
+'drush getlocations-leaflet'  will install the Leaflet javascript library
 If you want the library installed somewhere other than sites/all/libraries then provide the path after the command.
+
+Other map tiles.
+Getlocations supports the use of other sources of maps besides Google, you can show maps from OpenStreetMap, OpenCycleMap, Stamen and Esri.
+Developers can add their own maps using hook_getlocations_map_providers(), see the function getlocations_getlocations_map_providers() for examples.
+
+The Google Places Search service can be enabled for any map. It can be configured to provide an Autocomplete textfield or a dropdown.
+If you want to preselect a particular item in the dropdown you can add something like this to your theme's javascript:
+
+var key = 'key_1';
+var tp = 'grocery_or_supermarket';
+$("#search_places_select_" + key).val(tp);
 

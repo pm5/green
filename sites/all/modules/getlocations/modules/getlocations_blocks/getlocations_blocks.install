@@ -2,6 +2,7 @@
 
 /**
  * @file
+ * getlocations_blocks.install
  * @author Bob Hutchinson http://drupal.org/user/52366
  * @copyright GNU GPL
  *
@@ -14,4 +15,3 @@
 function getlocations_blocks_uninstall() {
   variable_del('getlocations_blocks');
 }
-

@@ -2,6 +2,7 @@
 
 /**
  * @file
+ * getlocations_search.admin.inc
  * @author Bob Hutchinson http://drupal.org/user/52366
  * @copyright GNU GPL
  *
@@ -17,8 +18,10 @@ function getlocations_search_settings_form() {
 
   $getlocations_search_defaults = getlocations_search_defaults();
   $form = array();
+  $pagetitle = '<div><h4>' . t('Getlocations Search') . '</h4></div>';
+  $form['pagetitle'] = array('#markup' => $pagetitle);
 
-  $form = _getlocations_search_settings_form($getlocations_search_defaults, 'admin');
+  $form += _getlocations_search_settings_form($getlocations_search_defaults, 'admin');
 
   $form['getlocations_search_paths'] = array(
     '#type' => 'fieldset',
@@ -37,9 +40,18 @@ function getlocations_search_settings_form() {
     128,
     t('Where the getlocations_search javascript file is located.')
   );
-  $form['getlocations_search_paths']['reset'] = getlocations_element_map_checkbox(
+  $form['getlocations_search_paths']['getlocations_search_admin_path'] = getlocations_element_path(
+    t('Path to getlocations_search admin javascript file'),
+    $getlocations_search_paths['getlocations_search_admin_path'],
+    70,
+    128,
+    t('Where the getlocations_search admin javascript file is located.')
+  );
+
+  $form['getlocations_search_paths']['reset'] = getlocations_element_dd(
     t('Reset'),
     0,
+    array(0 => t('No'), 1 => t('Reset'), 2 => t('Reset to minified')),
     t('Reset the paths to the defaults.')
   );
 
@@ -53,7 +65,8 @@ function getlocations_search_settings_form() {
 
 // form shared between admin config and block config
 function _getlocations_search_settings_form($defaults, $which = 'admin') {
-  drupal_add_js(GETLOCATIONS_SEARCH_PATH . '/js/getlocations_search_admin.js');
+  $getlocations_search_paths = getlocations_search_paths_get();
+  drupal_add_js($getlocations_search_paths['getlocations_search_admin_path']);
 
   $getlocations_defaults = getlocations_defaults();
   $defaults['jquery_colorpicker_enabled'] = $getlocations_defaults['jquery_colorpicker_enabled'];
@@ -323,6 +336,14 @@ function _getlocations_search_settings_form($defaults, $which = 'admin') {
     $defaults['display_dms'],
     ''
   );
+
+  $form[$varname]['display_geo_microformat'] = getlocations_element_dd(
+    t('Show Latitude/Longitude in accordance with Geo Microformat or Microdata markup'),
+    $defaults['display_geo_microformat'],
+    array( 0 => t('None'), 1 => t('Microformat'), 2 => t('Microdata')),
+    t('See the <a href="@a" target="_blank">Microformats wiki</a> or <a href="@b" target="_blank">Microdata standards</a> for more information', array('@a' => url('http://microformats.org/wiki/geo'), '@b' => url('http://www.w3.org/TR/microdata/')))
+  );
+
   $form[$varname]['display_accuracy'] = getlocations_element_map_checkbox(
     t('Show accuracy results'),
     $defaults['display_accuracy'],
@@ -357,6 +378,22 @@ function _getlocations_search_settings_form($defaults, $which = 'admin') {
     t('Set initial visibility on.')
   );
 
+  $form[$varname]['showall'] = getlocations_element_map_checkbox(
+    t('Show all markers'),
+    $defaults['showall'],
+    t('Show all the available locations on the map.')
+  );
+
+  $form[$varname]['geocode_button_enable'] = getlocations_element_map_checkbox(
+    t('Enable Geocode button'),
+    $defaults['geocode_button_enable'],
+    t('Works with Google Autocomplete.')
+  );
+  $form[$varname]['reset_button_enable'] = getlocations_element_map_checkbox(
+    t('Enable Reset button'),
+    $defaults['reset_button_enable']
+  );
+
   $form[$varname] += getlocations_map_display_basics_form($defaults);
 
   $form[$varname] += getlocations_map_display_options_form($defaults, FALSE, TRUE, 'getlocations_search');
@@ -367,6 +404,14 @@ function _getlocations_search_settings_form($defaults, $which = 'admin') {
   $form[$varname]['markeraction'] = getlocations_element_map_markeraction(
     $defaults['markeraction']
   );
+
+  if (module_exists('getdirections')) {
+    $form[$varname]['getdirections_link'] = getlocations_element_map_checkbox(
+      t('Link to Getdirections in bubble'),
+      $defaults['getdirections_link'],
+      t('Include a link to the Getdirections page in InfoBubble/InfoWindow.')
+    );
+  }
 
   $form[$varname]['zoom_on_single_use'] = getlocations_element_map_checkbox(
     t('Apply Default Zoom for Single location'),
@@ -381,51 +426,14 @@ function _getlocations_search_settings_form($defaults, $which = 'admin') {
   );
   $form[$varname]['nodezoom']['#suffix'] = '</div>';
 
-  // marker manager
+  // marker managers
   $form[$varname]['markermanagertype'] = getlocations_element_markermanagertype($defaults['markermanagertype']);
-  $form[$varname]['usemarkermanager'] = getlocations_element_map_checkbox(
-    t('Use Marker manager'),
-    $defaults['usemarkermanager'],
-    t('Use Marker manager. Switching this off will use no manager.')
-  );
-  $form[$varname]['minzoom'] = getlocations_element_map_zoom(
-    t('Minimum Zoom'),
-    $defaults['minzoom'],
-    t('The Minimum zoom level at which markers will be visible.')
-  );
 
-  $form[$varname]['maxzoom'] = getlocations_element_map_zoom(
-    t('Maximum Zoom'),
-    $defaults['maxzoom'],
-    t('The Maximum zoom level at which markers will be visible.')
-  );
+  // markermanager
+  $form[$varname] += getlocations_markermanager_form($defaults);
 
-  $form[$varname]['useclustermanager'] = getlocations_element_map_checkbox(
-    t('Use Cluster manager'),
-    $defaults['useclustermanager'],
-    t('Use Cluster manager. Switching this off will use no manager.')
-  );
-
-  if (file_exists(GETLOCATIONS_PATH . '/getlocations.markerclusterer_override.inc')) {
-    module_load_include('inc', 'getlocations', 'getlocations.markercluster_override');
-  }
-  else {
-    module_load_include('inc', 'getlocations', 'getlocations.markercluster');
-  }
-  $form[$varname]['markerclusterer_style'] = getlocations_element_markerclusterer_style($defaults['markerclusterer_style']);
-
-  $form[$varname]['markerclusterer_title'] = getlocations_element_map_tf(
-    t('Markerclusterer tooltip'),
-    $defaults['markerclusterer_title'],
-    t('The text of a Markerclusterer tooltip'),
-    30,
-    64,
-    TRUE
-  );
-
-  $form[$varname]['markerclusterer_zoom'] = getlocations_element_markerclusterer_zoom($defaults['markerclusterer_zoom']);
-  $form[$varname]['markerclusterer_size'] = getlocations_element_markerclusterer_size($defaults['markerclusterer_size']);
-  $form[$varname]['markerclusterer_minsize'] = getlocations_element_markerclusterer_minsize($defaults['markerclusterer_minsize']);
+  // markerclusterer
+  $form[$varname] += getlocations_markercluster_form($defaults);
 
   return $form;
 
@@ -497,12 +505,15 @@ function getlocations_search_settings_validate($form, &$form_state) {
         form_set_error('getlocations_search_block_defaults][height', t('Height must be valid css'));
       }
     }
-
   }
+
   $reset = $form_state['values']['getlocations_search_paths']['reset'];
   unset($form_state['values']['getlocations_search_paths']['reset']);
-  if ($reset) {
+  if ($reset == 1) {
     $form_state['values']['getlocations_search_paths'] = getlocations_search_paths_get(TRUE);
   }
-}
+  elseif ($reset == 2) {
+    $form_state['values']['getlocations_search_paths'] = getlocations_search_paths_get(FALSE, TRUE);
+  }
 
+}

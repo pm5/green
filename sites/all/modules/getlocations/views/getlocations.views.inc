@@ -22,10 +22,11 @@ function getlocations_views_plugins() {
         'handler' => 'getlocations_plugin_style_map',
         'theme' => 'getlocations_view_map',
         'theme path' => GETLOCATIONS_PATH . '/views',
-        'uses row plugin' => TRUE,
+        'uses row plugin' => FALSE,
         'uses grouping' => FALSE,
         'uses options' => TRUE,
         'type' => 'normal',
+        'uses fields' => TRUE,
       ),
     ),
   );
@@ -40,6 +41,7 @@ function template_preprocess_getlocations_view_map(&$variables) {
   $locations = $variables['view']->style_plugin->rendered_fields;
   $options = $variables['view']->style_plugin->options;
   $base_field = $variables['view']->style_plugin->view->base_field;
+  $thiskey = FALSE;
 
   $latlons = array();
   $minmaxes = array('minlat' => 0, 'minlon' => 0, 'maxlat' => 0, 'maxlon' => 0);
@@ -93,8 +95,8 @@ function template_preprocess_getlocations_view_map(&$variables) {
         if ($entity_type == 'node') {
           $marker = $options['node_map_marker'];
           if (isset($location['type']) && isset($location['field_name']) ) {
-            if (isset($options['node_marker__' . strtolower($location['type']) . '__' . $location['field_name']])) {
-              $marker = $options['node_marker__' . strtolower($location['type']) . '__' . $location['field_name']];
+            if (isset($options['node_marker__' . drupal_strtolower($location['type']) . '__' . $location['field_name']])) {
+              $marker = $options['node_marker__' . drupal_strtolower($location['type']) . '__' . $location['field_name']];
             }
           }
           // term marker
@@ -140,7 +142,7 @@ function template_preprocess_getlocations_view_map(&$variables) {
           $location['latitude'] = $ll[0];
           $location['longitude'] = $ll[1];
           $minmaxes = getlocations_do_minmaxes($ct, $location, $minmaxes);
-          $ct++;
+
           $name = htmlspecialchars_decode(isset($location['name']) && $location['name'] ? strip_tags($location['name']) : (isset($location['title']) && $location['title'] ? strip_tags($location['title']) : ''), ENT_QUOTES);
 
           // categories
@@ -175,7 +177,14 @@ function template_preprocess_getlocations_view_map(&$variables) {
               $options['categories'] = $cats;
             }
           }
-          $latlons[] = array($location['latitude'], $location['longitude'], $lid, $name, $marker, $base_field, $custom_content, $cat);
+          $latlons[$ct] = array($location['latitude'], $location['longitude'], $lid, $name, $marker, $base_field, $custom_content, $cat);
+          // special case for ajax, a custom content field containing the key of the map associated with an exposed form
+          $thiskey = FALSE;
+          if (isset($location['nothing']) && preg_match("/^key_/", $location['nothing'])) {
+            $thiskey = trim($location['nothing']);
+          }
+
+          $ct++;
         }
       }
     }
@@ -190,9 +199,17 @@ function template_preprocess_getlocations_view_map(&$variables) {
   $newdefaults = getlocations_adjust_vars($getlocations_defaults, $options);
 
   $mapid = getlocations_setup_map($newdefaults);
+  if ($thiskey) {
+    $mapid = $thiskey;
+  }
+
   getlocations_js_settings_do($newdefaults, $latlons, $minmaxes, $mapid);
 
-  $variables['map']  = theme('getlocations_show', array('width' => $newdefaults['width'], 'height' => $newdefaults['height'], 'defaults' => $newdefaults, 'mapid' => $mapid, 'type' => '', 'node' => ''));
+  // show_search_distance
+  if (isset($variables['view']->exposed_data['distance']) && isset($variables['view']->exposed_data['distance']['latitude']) && $variables['view']->exposed_data['distance']['latitude'] && isset($variables['view']->exposed_data['distance']['longitude']) && $variables['view']->exposed_data['distance']['longitude'] && $variables['view']->exposed_data['distance']['search_distance']) {
+    $newdefaults['search_dist_info'] = $variables['view']->exposed_data['distance'];
+  }
+
+  $variables['map']  = theme('getlocations_show', array('width' => $newdefaults['width'], 'height' => $newdefaults['height'], 'defaults' => $newdefaults, 'mapid' => $mapid, 'latlons' => $latlons, 'minmaxes' => $minmaxes, 'type' => '', 'node' => ''));
 
 }
-

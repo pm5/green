@@ -2,6 +2,7 @@
 
 /**
  * @file
+ * getlocations_fields.admin.inc
  * @author Bob Hutchinson http://drupal.org/user/52366
  * @copyright GNU GPL
  *
@@ -19,6 +20,8 @@ function getlocations_fields_settings_form() {
   $getlocations_fields_defaults = getlocations_fields_defaults();
 
   $form = array();
+  $pagetitle = '<div><h4>' . t('Getlocations Fields') . '</h4></div>';
+  $form['pagetitle'] = array('#markup' => $pagetitle);
 
   $form['getlocations_fields_defaults'] = array(
     '#type' => 'fieldset',
@@ -65,10 +68,43 @@ function getlocations_fields_settings_form() {
     128,
     t('Where the getlocations fields streetview javascript file is located.')
   );
+  // admin
+  $form['getlocations_fields_paths']['getlocations_fields_admin_path'] = getlocations_element_path(
+    t('Path to getlocations fields Admin javascript file'),
+    $getlocations_fields_paths['getlocations_fields_admin_path'],
+    80,
+    128,
+    t('Where the getlocations fields admin javascript file is located.')
+  );
+  // formatter
+  $form['getlocations_fields_paths']['getlocations_fields_formatter_path'] = getlocations_element_path(
+    t('Path to getlocations fields Formatter javascript file'),
+    $getlocations_fields_paths['getlocations_fields_formatter_path'],
+    80,
+    128,
+    t('Where the getlocations fields formatter javascript file is located.')
+  );
+  // views
+  $form['getlocations_fields_paths']['getlocations_fields_views_path'] = getlocations_element_path(
+    t('Path to getlocations fields Views javascript file'),
+    $getlocations_fields_paths['getlocations_fields_views_path'],
+    80,
+    128,
+    t('Where the getlocations fields views javascript file is located.')
+  );
+  // search views
+  $form['getlocations_fields_paths']['getlocations_fields_search_views_path'] = getlocations_element_path(
+    t('Path to getlocations fields Search Views javascript file'),
+    $getlocations_fields_paths['getlocations_fields_search_views_path'],
+    80,
+    128,
+    t('Where the getlocations fields search views javascript file is located.')
+  );
 
-  $form['getlocations_fields_paths']['reset'] = getlocations_element_map_checkbox(
+  $form['getlocations_fields_paths']['reset'] = getlocations_element_dd(
     t('Reset'),
     0,
+    array(0 => t('No'), 1 => t('Reset'), 2 => t('Reset to minified')),
     t('Reset the paths to the defaults.')
   );
 
@@ -154,8 +190,11 @@ function getlocations_fields_settings_validate($form, &$form_state) {
 
   $reset = $form_state['values']['getlocations_fields_paths']['reset'];
   unset($form_state['values']['getlocations_fields_paths']['reset']);
-  if ($reset) {
+  if ($reset == 1) {
     $form_state['values']['getlocations_fields_paths'] = getlocations_fields_paths_get(TRUE);
+  }
+  elseif ($reset == 2) {
+    $form_state['values']['getlocations_fields_paths'] = getlocations_fields_paths_get(FALSE, TRUE);
   }
 
 }
