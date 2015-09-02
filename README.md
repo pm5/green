@@ -1,10 +1,10 @@
 
-A Vagrant + Ansible environment for Drupal development.
+自然之窗 - 臺灣自然影像頻道
+===========================
 
 Usage
 -----
 
-        # Put your Drupal site under `docroot` directory
         # (Optional) put database dump at `database.mysql.gz`
         # (Optional) put public files dump at `files.tar.gz`
         $ vagrant up
@@ -50,4 +50,5 @@ Typical `settings.php` goes like this:
         $conf['memcache_servers'] = array(
           '192.168.10.3:11211' => 'default',  // to your Memcached installation
         );
+        $conf['memcache_key_prefix'] = 'green_Koo8Zohz';
 
