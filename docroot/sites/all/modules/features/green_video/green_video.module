@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the green_video feature.
+ */
+
+include_once 'green_video.features.inc';
